@@ -9,13 +9,14 @@
 """
  Pipeline to train the reader model on top of the retriever results
 """
-import os
-import sys
+
+import argparse
+import collections
 import glob
 import json
 import logging
-import argparse
-import collections
+import os
+import re
 from collections import defaultdict
 from typing import List
 
@@ -32,19 +33,17 @@ from dpr.options import add_encoder_params, setup_args_gpu, set_seed, add_traini
 from dpr.utils.data_utils import ShardedDataIterator, read_serialized_data_from_files, Tensorizer
 from dpr.utils.model_utils import get_schedule_linear, load_states_from_checkpoint, move_to_device, CheckpointState, \
     get_model_file, setup_for_distributed_mode, get_model_obj
+from torch.utils.tensorboard import SummaryWriter
 
 
-logging.basicConfig(
-    format='%(asctime)s #%(lineno)s %(levelname)s %(name)s :::  %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.INFO,
-    stream=sys.stdout,
-)
-
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+if (logger.hasHandlers()):
+    logger.handlers.clear()
+console = logging.StreamHandler()
+logger.addHandler(console)
 
 ReaderQuestionPredictions = collections.namedtuple('ReaderQuestionPredictions', ['id', 'predictions', 'gold_answers'])
-
 
 class ReaderTrainer(object):
     def __init__(self, args):
@@ -124,41 +123,83 @@ class ReaderTrainer(object):
 
         global_step = self.start_epoch * updates_per_epoch + self.start_batch
 
+        epoch_scores = []  # lossやscoreを格納するリスト
+        max_score = -np.inf
+        stop_count = 0
+
+        parameters = {'seed': args.seed, 'bsize': args.batch_size, 'lr': args.learning_rate,
+                      'warmup_steps': args.warmup_steps, 'dropout': args.dropout,
+                      'gradient': args.gradient_accumulation_steps}
+        suffix = '.s{}_bs{}_n{}_lr{}_warm{}_do{}_gradient_{}'.format(*parameters.values())
+        writer = SummaryWriter(log_dir=args.dir_tensorboard, filename_suffix=suffix)
+
         for epoch in range(self.start_epoch, int(args.num_train_epochs)):
             logger.info("***** Epoch %d *****", epoch)
-            global_step = self._train_epoch(scheduler, epoch, eval_step, train_iterator, global_step)
+            global_step, epoch_score = self._train_epoch(scheduler, epoch, eval_step, train_iterator, global_step)
+            epoch_scores.append(epoch_score)
+            # tensorboardに出力
+            writer.add_scalar(f'loss/train', epoch_score['train_loss'], epoch)
+            writer.add_scalar(f'exact_match/dev', epoch_score['dev_score'], epoch)
+
+            # early stopping
+            if args.early_stop:
+                if epoch_score['valid_score'] < max_score:  # 最大スコアを下回った場合カウントを1つ進める
+                    stop_count += 1
+                    if stop_count == args.early_stop_count:
+                        break # 訓練終了
+                else:
+                    max_score = epoch_score['valid_score']
+                    stop_count = 0
 
         if args.local_rank in [-1, 0]:
             logger.info('Training finished. Best validation checkpoint %s', self.best_cp_name)
 
+        max_score, best_epoch = -np.inf, 0
+        with open(args.loss_and_score_results_dir  +'/reader_train_score' + suffix + '.tsv', 'w') as fo_train, \
+            open(args.loss_and_score_results_dir + '/reader_dev_score' + suffix + '.tsv', 'w') as fo_dev:
+            fo_train.write('epoch\tloss\n')
+            fo_dev.write('epoch\tscore\n')
+            for epoch, epoch_score in enumerate(epoch_scores):
+                if epoch_score['dev_score'] < max_score:
+                    max_score = epoch_score['dev_score']
+                    best_epoch = epoch
+                fo_train.write('{}\t{}\n'.format(epoch, epoch_score['train_loss']))
+                fo_dev.write('{}\t{}\n'.format(epoch, epoch_score['dev_score']))
+
         return
 
-    def validate_and_save(self, epoch: int, iteration: int, scheduler):
+    def validate_and_save(self, epoch: int, iteration: int, scheduler, is_train: bool):
         args = self.args
         # in distributed DDP mode, save checkpoint for only one process
         save_cp = args.local_rank in [-1, 0]
-        reader_validation_score = self.validate()
+        reader_validation_score = self.validate(is_train, epoch)
 
         if save_cp:
-            cp_name = self._save_checkpoint(scheduler, epoch, iteration)
+            cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=False) # 毎epochごとにモデルを保存
             logger.info('Saved checkpoint to %s', cp_name)
 
             if reader_validation_score < (self.best_validation_result or 0):
                 self.best_validation_result = reader_validation_score
-                self.best_cp_name = cp_name
+                #self.best_cp_name = cp_name
+                self.best_cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=True)
                 logger.info('New Best validation checkpoint %s', cp_name)
 
-    def validate(self):
+        return reader_validation_score
+
+    def validate(self, is_train: bool, epoch: int):
         logger.info('Validation ...')
         args = self.args
         self.reader.eval()
-        data_iterator = self.get_data_iterator(args.dev_file, args.dev_batch_size, False, shuffle=False)
+        if is_train:
+            data_iterator = self.get_data_iterator(args.train_file, args.dev_batch_size, True, shuffle=False)
+        else:
+            data_iterator = self.get_data_iterator(args.dev_file, args.dev_batch_size, False, shuffle=False)
 
         log_result_step = args.log_batch_step
         all_results = []
-
+        epoch_loss = 0
         eval_top_docs = args.eval_top_docs
-        for i, samples_batch in enumerate(data_iterator.iterate_data()):
+        for i, samples_batch in enumerate(data_iterator.iterate_data(is_retriever=False)):
             input = create_reader_input(self.tensorizer.get_pad_id(),
                                         samples_batch,
                                         args.passages_per_question_predict,
@@ -166,9 +207,9 @@ class ReaderTrainer(object):
                                         args.max_n_answers,
                                         is_train=False, shuffle=False)
 
+
             input = ReaderBatch(**move_to_device(input._asdict(), args.device))
             attn_mask = self.tensorizer.get_attn_mask(input.input_ids)
-
             with torch.no_grad():
                 start_logits, end_logits, relevance_logits = self.reader(input.input_ids, attn_mask)
 
@@ -193,8 +234,14 @@ class ReaderTrainer(object):
             em = np.mean(ems[n])
             logger.info("n=%d\tEM %.2f" % (n, em * 100))
 
-        if args.prediction_results_file:
-            self._save_predictions(args.prediction_results_file, all_results)
+
+        if args.prediction_results_dir:  # devの結果のみファイル出力
+            if is_train:
+                output_file = os.path.join(args.prediction_results_dir, 'train_prediction_results_epoch_' + str(epoch) + '.json')
+            else:
+                output_file = os.path.join(args.prediction_results_dir,
+                                           'dev1_prediction_results_epoch_' + str(epoch) + '.json')
+            self._save_predictions(output_file, all_results)
 
         return em
 
@@ -208,8 +255,9 @@ class ReaderTrainer(object):
 
         self.reader.train()
         epoch_batches = train_data_iterator.max_iterations
+        data_iteration = 0  # data_iterationの初期化
 
-        for i, samples_batch in enumerate(train_data_iterator.iterate_data(epoch=epoch)):
+        for i, samples_batch in enumerate(train_data_iterator.iterate_data(epoch=epoch, is_retriever=False)):
 
             data_iteration = train_data_iterator.get_iteration()
 
@@ -219,7 +267,6 @@ class ReaderTrainer(object):
                 torch.manual_seed(args.seed + global_step)
                 if args.n_gpu > 0:
                     torch.cuda.manual_seed_all(args.seed + global_step)
-
             input = create_reader_input(self.tensorizer.get_pad_id(),
                                         samples_batch,
                                         args.passages_per_question,
@@ -262,20 +309,24 @@ class ReaderTrainer(object):
                 logger.info('Avg. loss per last %d batches: %f', rolling_loss_step, latest_rolling_train_av_loss)
                 rolling_train_loss = 0.0
 
-            if global_step % eval_step == 0:
-                logger.info('Validation: Epoch: %d Step: %d/%d', epoch, data_iteration, epoch_batches)
-                self.validate_and_save(epoch, train_data_iterator.get_iteration(), scheduler)
-                self.reader.train()
-
-        epoch_loss = (epoch_loss / epoch_batches) if epoch_batches > 0 else 0
+        epoch_loss = (epoch_loss / epoch_batches) if epoch_batches > 0 else 0 # epochごとのlossを計算
         logger.info('Av Loss per epoch=%f', epoch_loss)
-        return global_step
 
-    def _save_checkpoint(self, scheduler, epoch: int, offset: int) -> str:
+        # dev file の評価
+        logger.info('Validation Dev: Epoch: %d', epoch)
+        dev_score = self.validate_and_save(epoch, data_iteration, scheduler, is_train=False)
+
+        return global_step, {'train_loss': epoch_loss, 'dev_score': dev_score}
+
+    def _save_checkpoint(self, scheduler, epoch: int, offset: int, is_best: bool) -> str:
         args = self.args
         model_to_save = get_model_obj(self.reader)
-        cp = os.path.join(args.output_dir,
-                          args.checkpoint_file_name + '.' + str(epoch) + ('.' + str(offset) if offset > 0 else ''))
+        if is_best: # save best model
+            cp = os.path.join(args.output_dir,
+                              args.checkpoint_file_name + '.' + 'best' + ('.' + str(offset) if offset > 0 else ''))
+        else: # 毎epoch保存
+            cp = os.path.join(args.output_dir,
+                              args.checkpoint_file_name + '.' + str(epoch) + ('.' + str(offset) if offset > 0 else ''))
 
         meta_params = get_encoder_params_state(args)
 
@@ -315,9 +366,9 @@ class ReaderTrainer(object):
         _, idxs = torch.sort(relevance_logits, dim=1, descending=True, )
 
         batch_results = []
+
         for q in range(questions_num):
             sample = samples_batch[q]
-
             non_empty_passages_num = len(sample.passages)
             nbest = []
             for p in range(passages_per_question):
@@ -450,7 +501,7 @@ class ReaderTrainer(object):
                         }
                     } for top_k, span_pred in r.predictions.items()]
                 })
-            output.write(json.dumps(save_results, indent=4, ensure_ascii=False) + "\n")
+            output.write(json.dumps(save_results, indent=4) + "\n")
 
 
 def main():
@@ -464,24 +515,29 @@ def main():
     # reader specific params
     parser.add_argument("--max_n_answers", default=10, type=int,
                         help="Max amount of answer spans to marginalize per singe passage")
-    parser.add_argument('--passages_per_question', type=int, default=2,
+    parser.add_argument('--passages_per_question', type=int, default=24,
                         help="Total amount of positive and negative passages per question")
-    parser.add_argument('--passages_per_question_predict', type=int, default=50,
+    parser.add_argument('--passages_per_question_predict', type=int, default=100,
                         help="Total amount of positive and negative passages per question for evaluation")
-    parser.add_argument("--max_answer_length", default=10, type=int,
+    parser.add_argument("--max_answer_length", default=100, type=int,
                         help="The maximum length of an answer that can be generated. This is needed because the start "
                              "and end predictions are not conditioned on one another.")
     parser.add_argument('--eval_top_docs', nargs='+', type=int,
                         help="top retrival passages thresholds to analyze prediction results for")
     parser.add_argument('--checkpoint_file_name', type=str, default='dpr_reader')
     parser.add_argument('--prediction_results_file', type=str, help='path to a file to write prediction results to')
+    parser.add_argument('--loss_and_score_results_dir', type=str)
+    parser.add_argument('--prediction_results_dir', type=str)
 
     # training parameters
     parser.add_argument("--eval_step", default=2000, type=int,
                         help="batch steps to run validation and save checkpoint")
     parser.add_argument("--output_dir", default=None, type=str,
                         help="The output directory where the model checkpoints will be written to")
-
+    parser.add_argument('--dir_tensorboard', default=None, type=str,
+                        help='The output directory where the tensorboard log will be written to')
+    parser.add_argument('--early_stop_count', default=5, type=int)
+    parser.add_argument('--early_stop', action='store_true')
     parser.add_argument('--fully_resumable', action='store_true',
                         help="Enables resumable mode by specifying global step dependent random seed before shuffling "
                              "in-batch data")
@@ -501,7 +557,7 @@ def main():
         trainer.run_train()
     elif args.dev_file:
         logger.info("No train files are specified. Run validation.")
-        trainer.validate()
+        trainer.validate(is_train=False, epoch=0)
     else:
         logger.warning("Neither train_file or (model_file & dev_file) parameters are specified. Nothing to do.")
 

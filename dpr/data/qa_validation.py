@@ -81,7 +81,8 @@ def check_answer(questions_answers_docs, tokenizer, match_type) -> List[bool]:
 
     for i, doc_id in enumerate(doc_ids):
         doc = dpr_all_documents[doc_id]
-        text = doc[0]
+        #text = doc[0]
+        text = doc.text
 
         answer_found = False
         if text is None:  # cannot find the document for some reason
@@ -146,7 +147,7 @@ def _normalize_answer(s):
         return re.sub(r'\b(a|an|the)\b', ' ', text)
 
     def white_space_fix(text):
-        return ' '.join(text.split())
+        return ''.join(text.split())  # 日本語対応
 
     def remove_punc(text):
         exclude = set(string.punctuation)
@@ -159,4 +160,4 @@ def _normalize_answer(s):
 
 
 def _normalize(text):
-    return unicodedata.normalize('NFD', text)
+    return unicodedata.normalize('NFKC', text)  # 日本語対応
