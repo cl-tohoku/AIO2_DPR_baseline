@@ -15,6 +15,8 @@ LEARNING_RATE=2e-5
 GRADIENT_ACCUMULATION_STEP=1
 DROPOUT=0.2
 SEED=1
+PASSAGE_PER_QUESTION=24
+PASSAGE_PER_QUESTION_PREDICT=100
 
 DATE=`date +%Y%m%d-%H%M`
 # Train Reader ======================================
@@ -34,6 +36,8 @@ training_params="
 --dropout $DROPOUT
 --gradient_accumulation_steps $GRADIENT_ACCUMULATION_STEP
 --seed $SEED
+--passages_per_question $PASSAGE_PER_QUESTION
+--passages_per_question_predict $PASSAGE_PER_QUESTION_PREDICT
 "
 
 FI_TRAIN=${path to train dataset}
