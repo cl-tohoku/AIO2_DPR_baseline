@@ -176,7 +176,8 @@ def preprocess_retriever_data(samples: List[Dict], gold_info_file: Optional[str]
 def convert_retriever_results(is_train_set: bool, input_file: str, out_file_prefix: str,
                               gold_passages_file: str,
                               tensorizer: Tensorizer,
-                              num_workers: int = 8) -> List[str]:
+                              num_workers: int = 8,
+                              multiprocess: bool = False) -> List[str]:
     """
     Converts the file with dense retriever(or any compatible file format) results into the reader input data and
     serializes them into a set of files.
@@ -192,26 +193,44 @@ def convert_retriever_results(is_train_set: bool, input_file: str, out_file_pref
     """
     with open(input_file, 'r', encoding="utf-8") as f:
         samples = json.loads("".join(f.readlines()))
+        """ samples[0] : List[dict]
+        {
+            'question': str,
+            'answers': List[str],
+            'ctxs': [
+                {
+                    'id': '2030185',
+                    'title': str,
+                    'text': str,
+                    'score': '32.92322',
+                    'has_answer': false,
+                },
+            ]
+        }
+        """
     logger.info("Loaded %d questions + retrieval results from %s", len(samples), input_file)
+    num_workers = num_workers if multiprocess else 1
     workers = multiprocessing.Pool(num_workers)
     ds_size = len(samples)
     step = max(math.ceil(ds_size / num_workers), 1)
     chunks = [samples[i:i + step] for i in range(0, ds_size, step)]
     chunks = [(i, chunks[i]) for i in range(len(chunks))]
-
     logger.info("Split data into %d chunks", len(chunks))
 
     processed = 0
     _parse_batch = partial(_preprocess_reader_samples_chunk, out_file_prefix=out_file_prefix,
                            gold_passages_file=gold_passages_file, tensorizer=tensorizer,
                            is_train_set=is_train_set)
-    serialized_files = []
-    for file_name in workers.map(_parse_batch, chunks):
-        processed += 1
-        serialized_files.append(file_name)
-        logger.info('Chunks processed %d', processed)
-        logger.info('Data saved to %s', file_name)
-    logger.info('Preprocessed data stored in %s', serialized_files)
+    if multiprocess:
+        serialized_files = []
+        for file_name in workers.map(_parse_batch, chunks):
+            processed += 1
+            serialized_files.append(file_name)
+            logger.info('Chunks processed %d', processed)
+            logger.info('Data saved to %s', file_name)
+        logger.info('Preprocessed data stored in %s', serialized_files)
+    else:
+        serialized_files = [_preprocess_reader_samples_chunk(chunks[0], out_file_prefix, gold_passages_file, tensorizer, is_train_set, multiprocess=multiprocess)]
     return serialized_files
 
 
@@ -398,7 +417,7 @@ def _extend_span_to_full_words(tensorizer: Tensorizer, tokens: List[int], span: 
 
 def _preprocess_reader_samples_chunk(samples: List, out_file_prefix: str, gold_passages_file: str,
                                      tensorizer: Tensorizer,
-                                     is_train_set: bool) -> str:
+                                     is_train_set: bool, multiprocess: bool = True) -> str:
     chunk_id, samples = samples
     logger.info('Start batch %d', len(samples))
     iterator = preprocess_retriever_data(
@@ -420,3 +439,4 @@ def _preprocess_reader_samples_chunk(samples: List, out_file_prefix: str, gold_p
         logger.info('Serialize %d results to %s', len(results), out_file)
         pickle.dump(results, f)
     return out_file
+
