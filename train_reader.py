@@ -16,7 +16,7 @@ import glob
 import json
 import logging
 import os
-import re
+import sys
 from collections import defaultdict
 from typing import List
 
@@ -36,12 +36,23 @@ from dpr.utils.model_utils import get_schedule_linear, load_states_from_checkpoi
 from torch.utils.tensorboard import SummaryWriter
 
 
+logging.basicConfig(
+    format='%(asctime)s #%(lineno)s %(levelname)s %(name)s :::  %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO,
+    stream=sys.stdout,
+)
+
+logger = logging.getLogger(__name__)
+
+"""
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 if (logger.hasHandlers()):
     logger.handlers.clear()
 console = logging.StreamHandler()
 logger.addHandler(console)
+"""
 
 ReaderQuestionPredictions = collections.namedtuple('ReaderQuestionPredictions', ['id', 'predictions', 'gold_answers'])
 
@@ -123,7 +134,7 @@ class ReaderTrainer(object):
 
         global_step = self.start_epoch * updates_per_epoch + self.start_batch
 
-        epoch_scores = []  # lossやscoreを格納するリスト
+        epoch_scores = []
         max_score = -np.inf
         stop_count = 0
 
@@ -154,6 +165,7 @@ class ReaderTrainer(object):
         if args.local_rank in [-1, 0]:
             logger.info('Training finished. Best validation checkpoint %s', self.best_cp_name)
 
+        """"        
         max_score, best_epoch = -np.inf, 0
         with open(args.loss_and_score_results_dir  +'/reader_train_score' + suffix + '.tsv', 'w') as fo_train, \
             open(args.loss_and_score_results_dir + '/reader_dev_score' + suffix + '.tsv', 'w') as fo_dev:
@@ -165,6 +177,7 @@ class ReaderTrainer(object):
                     best_epoch = epoch
                 fo_train.write('{}\t{}\n'.format(epoch, epoch_score['train_loss']))
                 fo_dev.write('{}\t{}\n'.format(epoch, epoch_score['dev_score']))
+        """
 
         return
 
@@ -175,12 +188,11 @@ class ReaderTrainer(object):
         reader_validation_score = self.validate(is_train, epoch)
 
         if save_cp:
-            cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=False) # 毎epochごとにモデルを保存
+            cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=False)  # 毎epochごとにモデルを保存
             logger.info('Saved checkpoint to %s', cp_name)
 
             if reader_validation_score < (self.best_validation_result or 0):
                 self.best_validation_result = reader_validation_score
-                #self.best_cp_name = cp_name
                 self.best_cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=True)
                 logger.info('New Best validation checkpoint %s', cp_name)
 
@@ -321,10 +333,10 @@ class ReaderTrainer(object):
     def _save_checkpoint(self, scheduler, epoch: int, offset: int, is_best: bool) -> str:
         args = self.args
         model_to_save = get_model_obj(self.reader)
-        if is_best: # save best model
+        if is_best:  # save best model
             cp = os.path.join(args.output_dir,
                               args.checkpoint_file_name + '.' + 'best' + ('.' + str(offset) if offset > 0 else ''))
-        else: # 毎epoch保存
+        else:  # 毎epoch保存
             cp = os.path.join(args.output_dir,
                               args.checkpoint_file_name + '.' + str(epoch) + ('.' + str(offset) if offset > 0 else ''))
 

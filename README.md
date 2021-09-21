@@ -6,7 +6,6 @@
 - [AI王 〜クイズAI日本一決定戦〜](https://www.nlp.ecei.tohoku.ac.jp/projects/aio/)
 - 昨年度の概要は [こちら](https://sites.google.com/view/nlp2021-aio/)
 
-
 ### 目次
 - [環境構築](#環境構築)
 - [データセット](#データセット)
@@ -22,6 +21,7 @@
     - Reader
         4. hoge
         5. 
+
 
 ## 環境構築
 
@@ -186,4 +186,26 @@ $ bash scripts/retriever/retrieve_passage.sh \
 #### 4. 学習
 
 ```bash
+# bash sscripts/raeder/train_reader.sh
+
+$ python ${WORK_DIR}/src/reader_train.py \
+    --train_file ${FI_TRAIN} \
+    --dev_file ${FI_DEV} \
+    --output_dir ${MODEL_DIR} \
+    --dir_tensorboard ${TENSORBOARD_DIR} \
+    --loss_and_score_results_dir ${OUT_DIR} \
+    --prediction_results_dir ${PREDICTION_RESULTS_DIR} \
+```
+
+#### 5. 評価
+
+```bash
+# bash sscripts/raeder/eval_reader.sh
+
+$ python ${WORK_DIR}/src/reader_train.py \
+    --dev_file ${FI_TEST} \
+    --output_dir ${MODEL_DIR} \
+    --dir_tensorboard ${TENSORBOARD_DIR} \
+    --loss_and_score_results_dir ${OUT_DIR} \
+    --prediction_results_dir ${PREDICTION_RESULTS_DIR} \
 ```
