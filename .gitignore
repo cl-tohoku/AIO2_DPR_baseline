@@ -1,0 +1,7 @@
+**/__pycache__/
+**/outputs/
+**/work/
+**/tmp/
+
+.python-version
+**/*debug.json

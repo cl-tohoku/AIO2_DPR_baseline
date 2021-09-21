@@ -25,9 +25,10 @@ from dpr.utils.data_utils import normalize_question
 
 logger = logging.getLogger(__name__)
 
-BiEncoderBatch = collections.namedtuple('BiENcoderInput',
-                                        ['question_ids', 'question_segments', 'context_ids', 'ctx_segments',
-                                         'is_positive', 'hard_negatives'])
+BiEncoderBatch = collections.namedtuple(
+    'BiENcoderInput',
+    ['question_ids', 'question_segments', 'context_ids', 'ctx_segments', 'is_positive', 'hard_negatives']
+)
 
 
 # Eq.1 : calculate similarity
@@ -65,8 +66,7 @@ class BiEncoder(nn.Module):
         self.fix_ctx_encoder = fix_ctx_encoder
 
     @staticmethod
-    def get_representation(sub_model: nn.Module, ids: T, segments: T, attn_mask: T, fix_encoder: bool = False) -> (
-    T, T, T):
+    def get_representation(sub_model: nn.Module, ids: T, segments: T, attn_mask: T, fix_encoder: bool = False) -> (T, T, T):
         sequence_output = None
         pooled_output = None
         hidden_states = None
