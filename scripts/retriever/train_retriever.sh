@@ -24,6 +24,7 @@ source scripts/configs/config.pth
 DIR_PROJECT=$DIR_DPR/$NAME
 mkdir -p $DIR_PROJECT/retriever
 cp $CONFIG $DIR_PROJECT/retriever/hps.json
+cp $0 $DIR_PROJECT/reader/run.sh
 
 LOG_FILE=$DIR_PROJECT/logs/retriever/train_${DATE}.log
 mkdir -p `dirname $LOG_FILE`
@@ -33,5 +34,6 @@ python train_dense_encoder.py \
   --train_file $TRAIN_FILE \
   --dev_file $DEV_FILE \
   --output_dir $DIR_PROJECT/retriever \
+  --tensorboard_dir $DIR_PROJECT/retriever/tensorboard \
   --config $DIR_PROJECT/retriever/hps.json \
 | tee $LOG_FILE

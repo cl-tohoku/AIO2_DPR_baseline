@@ -15,12 +15,12 @@
 - [Dense Passage Retrieval](#dense-passage-retrieval)
     - 設定
     - Retriever
-        1. 学習
-        2. 文書集合のエンコード
-        3. データセットの質問に関連する文書抽出
+        - 1. BiEncoder の学習
+        - 2. 文書集合のエンコード
+        - 3. データセットの質問に関連する文書抽出
     - Reader
-        4. hoge
-        5. 
+        - 4. Reader の学習
+        - 5. 評価
 
 
 ## 環境構築
@@ -52,12 +52,12 @@ $ bash scripts/download_data.sh <output_dir>
 |  |- test_jaqket.json
 ```
 
-|データ|質問数|
-|:---|---:|
-|訓練||
-|開発||
-|評価||
-|wiki|6795533|
+|データ|質問数|文書数|
+|:---|---:|---:|
+|訓練|17,735|-|
+|開発|1,992|-|
+|評価|2,000|-|
+|wiki|-|6,795,533|
 
 
 ### 学習データ
@@ -137,7 +137,7 @@ $ vim scripts/configs/config.pth
 
 ### Retriever
 
-#### 1. 学習
+#### 1. BiEncoder の学習
 - [scripts/retriever/train_retriever.sh](scripts/retriever/train_retriever.sh)
 
 ```bash
@@ -183,29 +183,36 @@ $ bash scripts/retriever/retrieve_passage.sh \
 
 ### Reader
 
-#### 4. 学習
+#### 4. Reader の学習
+- [scripts/reader/train_reader.sh](scripts/reader/train_reader.sh)
 
 ```bash
-# bash sscripts/raeder/train_reader.sh
+# 実行例
 
-$ python ${WORK_DIR}/src/reader_train.py \
-    --train_file ${FI_TRAIN} \
-    --dev_file ${FI_DEV} \
-    --output_dir ${MODEL_DIR} \
-    --dir_tensorboard ${TENSORBOARD_DIR} \
-    --loss_and_score_results_dir ${OUT_DIR} \
-    --prediction_results_dir ${PREDICTION_RESULTS_DIR} \
+$ exp_name="baseline"
+$ config_file="scripts/configs/reader_base.json"
+$ train_file="path/to/retrieved/train/file"
+$ dev_file="path/to/retrieved/dev/file"
+
+$ bash scripts/raeder/train_reader.sh \
+    -n $exp_name \
+    -c $config_file \
+    -t $train_file \
+    -d $dev_file
 ```
 
 #### 5. 評価
+- [scripts/reader/eval_reader.sh](scripts/reader/eval_reader.sh)
 
 ```bash
-# bash sscripts/raeder/eval_reader.sh
+# 実行例
 
-$ python ${WORK_DIR}/src/reader_train.py \
-    --dev_file ${FI_TEST} \
-    --output_dir ${MODEL_DIR} \
-    --dir_tensorboard ${TENSORBOARD_DIR} \
-    --loss_and_score_results_dir ${OUT_DIR} \
-    --prediction_results_dir ${PREDICTION_RESULTS_DIR} \
+$ exp_name="baseline"
+$ config_file="scripts/configs/reader_base.json"
+$ test_file="path/to/retrieved/test/file"
+
+$ bash scripts/raeder/eval_reader.sh \
+    -n $exp_name \
+    -c $config_file \
+    -e $test_file
 ```

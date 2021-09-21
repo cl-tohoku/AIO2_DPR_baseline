@@ -1,0 +1,44 @@
+{
+    "seed": 2021,
+
+    "num_train_epochs": 50,
+    "eval_step": 2000,
+    "log_batch_step": 100,
+    "train_rolling_loss_step": 100,
+    "checkpoint_file_name": "dpr_reader",
+
+    "batch_size": 8,
+    "dev_batch_size": 4,
+    "gradient_accumulation_steps": 1,
+
+    "learning_rate": 2e-5,
+    "adam_eps": 1e-8,
+    "adam_betas": "(0.9, 0.999)",
+    "weight_decay": 0.0,
+    "warmup_steps": 1237,
+    "dropout": 0.1,
+    "max_grad_norm": 2.0,
+
+    "pretrained_model_cfg": "cl-tohoku/bert-base-japanese-whole-word-masking",
+    "encoder_model_type": "hf_bert",
+    "pretrained_file": null,
+    "projection_dim": 0,
+    "sequence_length": 256,
+
+    "early_stop": false,
+    "early_stop_count": 5,
+    "fully_resumable": false,
+
+    "max_n_answers": 10,
+    "max_answer_length": 100,
+    "passages_per_question": 24,
+    "passages_per_question_predict": 100,
+    "gold_passages_src": null,
+    "gold_passages_src_dev": null,
+    "num_workers": 16,
+
+    "no_cuda": false,
+    "local_rank": -1,
+    "fp16": true,
+    "fp16_opt_level": "O1"
+}

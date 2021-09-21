@@ -643,7 +643,7 @@ def create_arg_parser():
 
     # additional parameters
     misc = parser.add_argument_group('Group of Additional Parameters')
-    misc.add_argument('--tensorboard_dir', type=str, default=None, help='Destination of tensorboard')
+    misc.add_argument('--tensorboard_dir', type=str, default=None, help='The output directory where the tensorboard log will be written to')
     misc.add_argument('--config_file', type=str, default=None, help='Parameter file')
 
     return parser
@@ -667,8 +667,7 @@ def main():
     if args.config_file:
         args = override_args(args)
     
-    if args.output_dir is not None:
-        os.makedirs(args.output_dir, exist_ok=True)
+    os.makedirs(args.output_dir, exist_ok=True)
 
     # save argparse parameters @ args.output_dir
     config_file = os.path.join(args.output_dir, 'hps.json')
