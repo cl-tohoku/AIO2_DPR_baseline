@@ -17,7 +17,7 @@ from torch import Tensor as T
 from torch import nn
 from transformers.modeling_bert import BertConfig, BertModel
 from transformers.optimization import AdamW
-from transformers.tokenization_bert import BertTokenizer
+from transformers import BertJapaneseTokenizer
 from transformers.tokenization_roberta import RobertaTokenizer
 
 from dpr.utils.data_utils import Tensorizer
@@ -90,7 +90,8 @@ def get_optimizer(model: nn.Module, learning_rate: float = 1e-5, adam_eps: float
 
 
 def get_bert_tokenizer(pretrained_cfg_name: str, do_lower_case: bool = True):
-    return BertTokenizer.from_pretrained(pretrained_cfg_name, do_lower_case=do_lower_case)
+    # return BertTokenizer.from_pretrained(pretrained_cfg_name, do_lower_case=do_lower_case)
+    return BertJapaneseTokenizer.from_pretrained(pretrained_cfg_name, do_lower_case=do_lower_case)
 
 
 def get_roberta_tokenizer(pretrained_cfg_name: str, do_lower_case: bool = True):
@@ -136,7 +137,8 @@ class HFBertEncoder(BertModel):
 
 
 class BertTensorizer(Tensorizer):
-    def __init__(self, tokenizer: BertTokenizer, max_length: int, pad_to_max: bool = True, truncation: bool = True):
+    # def __init__(self, tokenizer: BertTokenizer, max_length: int, pad_to_max: bool = True, truncation: bool = True):
+    def __init__(self, tokenizer: BertJapaneseTokenizer, max_length: int, pad_to_max: bool = True, truncation: bool = True):
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.pad_to_max = pad_to_max

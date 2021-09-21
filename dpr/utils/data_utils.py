@@ -9,6 +9,7 @@
 Utilities for general purpose data processing
 """
 
+import sys
 import json
 import logging
 import math
@@ -18,39 +19,44 @@ from typing import List, Iterator, Callable
 
 from torch import Tensor as T
 
-logger = logging.getLogger()
+logging.basicConfig(
+    format='%(asctime)s #%(lineno)s %(levelname)s %(name)s :::  %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO,
+    stream=sys.stdout,
+)
+
+logger = logging.getLogger(__name__)
+
+END = "\033[0m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+BLUE = "\033[34m"
 
 
 def read_serialized_data_from_files(paths: List[str]) -> List:
     results = []
     for i, path in enumerate(paths):
         with open(path, "rb") as reader:
-            logger.info('Reading file %s', path)
             data = pickle.load(reader)
             results.extend(data)
-            logger.info('Aggregated data size: {}'.format(len(results)))
-    logger.info('Total data size: {}'.format(len(results)))
+            logger.info(f'| READ ... L-{len(results)} {path}')
+    logger.info(f'| SIZE Total data ... {len(results)}')
     return results
 
 
 def read_data_from_json_files(paths: List[str], upsample_rates: List = None) -> List:
-    logger.info('@read_data_from_json_files')
-    logger.info(f'| paths ... {paths}')
-
     results = []
     if upsample_rates is None:
         upsample_rates = [1] * len(paths)
-
     assert len(upsample_rates) == len(paths), 'up-sample rates parameter doesn\'t match input files amount'
-
     for i, path in enumerate(paths):
         with open(path, 'r', encoding="utf-8") as f:
-            logger.info('READ | %s' % path)
             data = json.load(f)
-            upsample_factor = int(upsample_rates[i])
+            upsample_factor = int(upsample_rates[i]) # 1
             data = data * upsample_factor
             results.extend(data)
-            logger.info('Aggregated data size: {}'.format(len(results)))
+            logger.info(f'| READ ... L-{len(results)} {path}')
     return results
 
 
@@ -99,10 +105,11 @@ class ShardedDataIterator(object):
     def total_data_len(self) -> int:
         return len(self.data)
 
-    def iterate_data(self, epoch: int = 0) -> Iterator[List]:
+    def iterate_data(self, epoch: int = 0, is_retriever: bool = True) -> Iterator[List]:
         if self.shuffle:
-            # to be able to resume, same shuffling should be used when starting from a failed/stopped iteration
-            epoch_rnd = random.Random(self.shuffle_seed + epoch)
+            # to be able to resume, same shuffling should be used when starting from a failed/stopped iterations
+            logger.info(f'| SHUFFLE ... iterate_data')
+            epoch_rnd: random.Random = random.Random(self.shuffle_seed + epoch)
             epoch_rnd.shuffle(self.data)
 
         # if resuming iteration somewhere in the middle of epoch, one needs to adjust max_iterations
@@ -111,7 +118,9 @@ class ShardedDataIterator(object):
 
         shard_samples = self.data[self.shard_start_idx:self.shard_end_idx]
         for i in range(self.iteration * self.batch_size, len(shard_samples), self.batch_size):
-            items = shard_samples[i:i + self.batch_size]
+            items = shard_samples[i:i+self.batch_size]
+            if is_retriever:
+                items = self.reset_negatives(items)
             if self.strict_batch_size and len(items) < self.batch_size:
                 logger.debug('Extending batch to max size')
                 items.extend(shard_samples[0:self.batch_size - len(items)])
@@ -128,6 +137,30 @@ class ShardedDataIterator(object):
         logger.debug('Finished iterating, iteration={}, shard={}'.format(self.iteration, self.shard_id))
         # reset the iteration status
         self.iteration = 0
+
+    # My Extension: Shuffle 後 Negative がバッチ内から選択されるように reset
+    def reset_negatives(self, items):
+        """ items[0]: len(items) == batch_size
+        {
+            'question': str,
+            'answers': List[str],
+            'positive_ctxs': [{'title':str, 'text':str}],
+            'negative_ctxs': [{'title':str, 'text':str}],
+            'hard_negative_ctxs': [{'title':str, 'text':str}],
+        }
+        """
+        output = items.copy()
+        for i, item in enumerate(items):
+            negatives, other_answers = [], []
+            for tmp in items:
+                if item != tmp:
+                    other_answers.extend([t['title'] for t in tmp['positive_ctxs']])
+                    negatives.extend(tmp['positive_ctxs'])
+            assert all(map(lambda x: x['title'] in other_answers, negatives)), \
+                "NegativeCtxsError: 他の answers が正しく negative_ctxs に含まれない"
+            output[i]['negative_ctxs'] = negatives
+
+        return output
 
     def get_iteration(self) -> int:
         return self.iteration
