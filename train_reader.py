@@ -16,7 +16,7 @@ import glob
 import json
 import logging
 import os
-import re
+import sys
 from collections import defaultdict
 from typing import List
 
@@ -36,12 +36,23 @@ from dpr.utils.model_utils import get_schedule_linear, load_states_from_checkpoi
 from torch.utils.tensorboard import SummaryWriter
 
 
+logging.basicConfig(
+    format='%(asctime)s #%(lineno)s %(levelname)s %(name)s :::  %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO,
+    stream=sys.stdout,
+)
+
+logger = logging.getLogger(__name__)
+
+"""
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 if (logger.hasHandlers()):
     logger.handlers.clear()
 console = logging.StreamHandler()
 logger.addHandler(console)
+"""
 
 ReaderQuestionPredictions = collections.namedtuple('ReaderQuestionPredictions', ['id', 'predictions', 'gold_answers'])
 
