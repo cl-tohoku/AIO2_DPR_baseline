@@ -1,18 +1,29 @@
+# AI王 〜クイズAI日本一決定戦〜 2021
+
 ![AIO](imgs/aio.png)
 
-# AI王 〜クイズAI日本一決定戦〜 2021
 オープンドメイン質問応答
 - [AI王 〜クイズAI日本一決定戦〜](https://www.nlp.ecei.tohoku.ac.jp/projects/aio/)
-- 昨年度の概要は [こちら](#)
+- 昨年度の概要は [こちら](https://sites.google.com/view/nlp2021-aio/)
 
-## 目次
+### 目次
+- [環境構築](#環境構築)
+- [データセット](#データセット)
+    - ダウンロード
+    - 学習データ
+    - 文書集合（Wikipedia）
+- [Dense Passage Retrieval](#dense-passage-retrieval)
+    - 設定
+    - Retriever
+        1. 学習
+        2. 文書集合のエンコード
+        3. データセットの質問に関連する文書抽出
+    - Reader
+        4. hoge
+        5. 
 
-- [Setup](#Setup)
-    - 環境構築
-    - データセット
 
-
-## セットアップ
+## 環境構築
 
 ```bash
 $ pip install pip-tools
@@ -26,7 +37,8 @@ $ pip-sync
 > - https://www.nlp.ecei.tohoku.ac.jp/projects/jaqket/
 > - 鈴木正敏, 鈴木潤, 松田耕史, ⻄田京介, 井之上直也. JAQKET:クイズを題材にした日本語QAデータセットの構築. 言語処理学会第26回年次大会(NLP2020) [\[PDF\]](https://www.anlp.jp/proceedings/annual_meeting/2020/pdf_dir/P2-24.pdf)
 
-### Download
+
+### ダウンロード
 
 ```bash
 $ bash scripts/download_data.sh <output_dir>
@@ -40,8 +52,6 @@ $ bash scripts/download_data.sh <output_dir>
 |  |- test_jaqket.json
 ```
 
-#### Statistics
-
 |データ|質問数|
 |:---|---:|
 |訓練||
@@ -49,18 +59,18 @@ $ bash scripts/download_data.sh <output_dir>
 |評価||
 |wiki|6795533|
 
-#### Jaqket Format
 
-The expected data format is a list of entry examples, where each entry example is a dictionary containing
+### 学習データ
 
-- `question`: question text
-- `answers`: list of answer text
-- `positive_ctxs`: a list of positive passages where each item is a dictionary containing following:
-    - `id`: passage id
-    - `title`: article title
-    - `text`: passage text
-- `negative_ctxs`: a list of negative passages (train 内で定義される)
-- `hard_negative_ctxs`: a list of hard negative passages
+以下の例に示した要素からなるリスト型の JSON ファイル
+- `question`：質問
+- `answers`：答えのリスト
+- `positive_ctxs`：正例文書。以下の辞書で構成されたリスト形式。
+    - `id`：文書インデックス
+    - `title`：Wikipedia のタイトル
+    - `text`：Wikipedia の記事 
+- `negative_ctxs`：負例文書（学習中に再定義される）
+- `hard_negative_ctxs`: ハード負例文書。`positive_ctxs` と同様の形式。
 
 ```json
 {
@@ -86,9 +96,12 @@ The expected data format is a list of entry examples, where each entry example i
 }
 ```
 
-#### Wikipedia Data Format
+### 文書集合（Wikipedia）
 
-The wikipedia data is a format of tsv, where each entry example is a dictionary containing. 
+- 以下のアイテムで構成される TSV 形式のデータ（2021.05.03 時点のものを使用）
+    - `id`：文書インデックス
+    - `text`：Wikipedia の記事
+    - `title`：Wikipedia のタイトル
 
 ```tsv
 id      text    title
@@ -96,57 +109,76 @@ id      text    title
 ```
 
 
-## Dense Passage Retrieval 
+## Dense Passage Retrieval
+
+本実装では、オープンドメイン質問応答に取り組むための二つのモジュールを学習する<br>
+1. 与えられた質問に対して、文書集合から関連する文書を検索するモジュール（Retriever）
+2. 検索した関連文書の中から質問の答えとなる箇所を特定するモジュール（Reader）
 
 ![](imgs/dpr.png)
 
+より詳細な解説は、以下を参照して下さい。
 
-### Settings
+> Karpukhin, Vladimir and Oguz, Barlas and Min, Sewon and Lewis, Patrick and Wu, Ledell and Edunov, Sergey and Chen, Danqi and Yih, Wen-tau. Dense Passage Retrieval for Open-Domain Question Answering (EMNLP2020) [\[paper\]](https://www.aclweb.org/anthology/2020.emnlp-main.550) [\[github\]](https://github.com/facebookresearch/DPR)
+
+### 設定
 
 ```bash
 $ vim scripts/configs/config.pth
 ```
 
+- 実装を始める前に以下の項目を設定して下さい。
+    - `WIKI_FILE`：Wikipedia の文書ファイル
+    - `TRAIN_FILE`：訓練セット
+    - `DEV_FILE`：開発セット
+    - `TEST_FILE`：評価セット
+    - `DIR_DPR`：モデルやエンベッディングの保存先
+ 
+
 ### Retriever
 
 #### 1. 学習
+- [scripts/retriever/train_retriever.sh](scripts/retriever/train_retriever.sh)
 
 ```bash
-# bash scripts/retriever/train_retriever.sh
+# 実行例
 
-$ python train_dense_encoder.py \
-  --train_file $TRAIN_FILE \
-  --dev_file $DEV_FILE \
-  --output_dir $DIR_PROJECT/retriever \
-  --config $DIR_PROJECT/retriever/hps.json
+$ exp_name="baseline"
+$ config_file="scripts/configs/retriever_base.json"
+
+$ bash scripts/retriever/train_retriever.sh \
+    -n $exp_name \
+    -c $config_file
 ```
 
 #### 2. 文書集合のエンコード
+- [scripts/retriever/encode_ctxs.sh](scripts/retriever/encode_ctxs.sh)
 
 ```bash
-# bash scripts/retriever/encode_ctxs.sh
-$ python generate_dense_embeddings.py \
-  --batch_size 512 \
-  --model_file <model> \
-  --ctx_file <wikipedia> \
-  --output_dir $DIR_PROJECT/embeddings
+# 実行例
+
+$ exp_name="baseline"
+$ model_file="path/to/model"
+
+$ bash scripts/retriever/encode_ctxs.sh \
+    -n $exp_name \
+    -m $model
 ```
 
 #### 3. データセットの質問に関連する文書抽出
+- [scripts/retriever/retrieve_passage.sh](scripts/retriever/retrieve_passage.sh)
 
 ```bash
-# bash scripts/retriever/retrieve_passage.sh
+# 実行例
 
-$ python dense_retriever.py \
-    --n-docs 100 \
-    --validation_workers 32 \
-    --batch_size 64 \
-    --projection_dim 768 \
-    --model_file $MODEL \
-    --ctx_file $WIKI_FILE \
-    --encoded_ctx_file $EMBEDDING \
-    --qa_file ${QA_FILES[$KEY]} \
-    --out_file $FO_FILE
+$ exp_name="baseline"
+$ model="path/to/model"
+$ embed="path/to/embeddings"
+
+$ bash scripts/retriever/retrieve_passage.sh \
+    -n $exp_name \
+    -m $model \
+    -e $embed
 ```
 
 ### Reader

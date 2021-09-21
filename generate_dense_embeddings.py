@@ -9,17 +9,18 @@
  Command line tool that produces embeddings for a large documents base based on the pretrained ctx & question encoders
  Supposed to be used in a 'sharded' way to speed up the process.
 """
-import os
-import sys
+import argparse
 import csv
 import json
-import pickle
 import logging
+import os
 import pathlib
-import argparse
+import pickle
+import sys
 from typing import List, Tuple
 
 import numpy as np
+from tqdm import tqdm
 
 import torch
 from torch import nn
@@ -33,7 +34,10 @@ from dpr.options import (
         add_tokenizer_params, 
         add_cuda_params,
         )
-from dpr.utils.data_utils import Tensorizer
+from dpr.utils.data_utils import (
+    Tensorizer,
+    read_ctxs
+)
 from dpr.utils.model_utils import (
         setup_for_distributed_mode, 
         get_model_obj, 
@@ -52,7 +56,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def gen_ctx_vectors(args, ctx_rows: List[Tuple[object, str, str]], model: nn.Module, tensorizer: Tensorizer,
+def gen_ctx_vectors(args, ctx_rows: List[dict], model: nn.Module, tensorizer: Tensorizer,
                     insert_title: bool = True) -> List[Tuple[object, np.array]]:
     n = len(ctx_rows)
     bsz = args.batch_size
@@ -60,7 +64,7 @@ def gen_ctx_vectors(args, ctx_rows: List[Tuple[object, str, str]], model: nn.Mod
     results = []
     for j, batch_start in enumerate(range(0, n, bsz)):
 
-        batch_token_tensors = [tensorizer.text_to_tensor(ctx[1], title=ctx[2] if insert_title else None) for ctx in
+        batch_token_tensors = [tensorizer.text_to_tensor(ctx['text'], title=ctx['title'] if insert_title else None) for ctx in
                                ctx_rows[batch_start:batch_start + bsz]]
 
         ctx_ids_batch = move_to_device(torch.stack(batch_token_tensors, dim=0),args.device)
@@ -70,7 +74,7 @@ def gen_ctx_vectors(args, ctx_rows: List[Tuple[object, str, str]], model: nn.Mod
             _, out, _ = model(ctx_ids_batch, ctx_seg_batch, ctx_attn_mask)
         out = out.cpu()
 
-        ctx_ids = [r[0] for r in ctx_rows[batch_start:batch_start + bsz]]
+        ctx_ids = [r['id'] for r in ctx_rows[batch_start:batch_start + bsz]]
 
         assert len(ctx_ids) == out.size(0)
 
@@ -94,7 +98,7 @@ def create_arg_parser():
     add_cuda_params(parser)
 
     parser.add_argument('--ctx_file', type=str, default=None, help='Path to passages set .tsv file')
-    parser.add_argument('--out_file', required=True, type=str, default=None,
+    parser.add_argument('--output_dir', required=True, type=str, default=None,
                         help='output .tsv file path to write results to ')
     parser.add_argument('--shard_id', type=int, default=0, help="Number(0-based) of data shard to process")
     parser.add_argument('--num_shards', type=int, default=1, help="Total amount of data shards")
@@ -109,16 +113,6 @@ def main():
     
     assert args.model_file, 'Please specify --model_file checkpoint to init model weights'
     setup_args_gpu(args)
-    
-    # write args parameters
-    dir_config = os.path.join(os.getcwd(), 'configs')
-    os.makedirs(dir_config, exist_ok=True)
-    with open(os.path.join(dir_config, 'generate_dense_embeddings.json'), 'w') as f:
-        try:
-            json.dump(args.__dict__, f, indent=4)
-        except:
-            print(args.__dict__, file=f)
-        logger.info(f'SAVE configs ... {f.name}')
     
     # model load 
     saved_state = load_states_from_checkpoint(args.model_file)
@@ -145,12 +139,7 @@ def main():
     model_to_load.load_state_dict(ctx_state)
 
     logger.info('reading data from file=%s', args.ctx_file)
-
-    rows = []
-    with open(args.ctx_file) as tsvfile:
-        reader = csv.reader(tsvfile, delimiter='\t')
-        # file format: doc_id, doc_text, title
-        rows.extend([(row[0], row[1], row[2]) for row in reader if row[0] != 'id'])
+    rows = read_ctxs(args.ctx_file)
 
     shard_size = int(len(rows) / args.num_shards)
     start_idx = args.shard_id * shard_size
@@ -161,18 +150,20 @@ def main():
 
     data = gen_ctx_vectors(args, rows, encoder, tensorizer, True)
 
-    file = args.out_file + '_' + str(args.shard_id)
-    pathlib.Path(os.path.dirname(file)).mkdir(parents=True, exist_ok=True)
-    logger.info('Writing results to %s' % file)
-    with open(file, mode='wb') as f:
+    fo_emb = "{dest}/emb_{model}{suffix}.pickle".format(
+        dest = args.output_dir,
+        model = os.path.basename(args.model_file).replace('.pt', ''),
+        suffix = f'_{args.shard_id}' if args.num_shards>1 else '',
+    )
+    pathlib.Path(os.path.dirname(fo_emb)).mkdir(parents=True, exist_ok=True)
+    logger.info('Writing results to %s' % fo_emb)
+    with open(fo_emb, mode='wb') as f:
         pickle.dump(data, f)
 
-    logger.info('Total passages processed %d. Written to %s', len(data), file)
+    logger.info('Total passages processed %d. Written to %s', len(data), fo_emb)
 
     
 
 if __name__ == '__main__':
-    logger.info(f'BEGIN ... {__file__}')
     main()
-    logger.info(f'DONE ... {__file__}')
 

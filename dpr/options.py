@@ -10,15 +10,34 @@ Command line arguments utils
 """
 
 import argparse
+import json
 import logging
 import os
 import random
 import socket
+import sys
 
 import numpy as np
 import torch
 
 logger = logging.getLogger()
+
+
+def override_args(args):
+    logger.info(f'Read config file from {args.config_file}')
+    if args.config_file is not None:
+        if args.config_file.endswith('.jsonnet'):
+            import _jsonnet
+            config_args = json.loads(_jsonnet.evaluate_file(args.config_file))
+        elif args.config_file.endswith('.json'):
+            config_args = json.load(open(args.config_file))
+        else:
+            raise RuntimeError('`--config_file` should endswith((".json", ".jsonnet"))')
+        override_keys = {arg[len('--'):].split('=')[0] for arg in sys.argv[1:] if arg.startswith('--')}
+        for k, v in config_args.items():
+            if k not in override_keys:
+                setattr(args, k, v)
+    return args
 
 
 def add_tokenizer_params(parser: argparse.ArgumentParser):
