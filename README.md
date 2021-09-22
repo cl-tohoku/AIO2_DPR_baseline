@@ -15,12 +15,21 @@
 - [Dense Passage Retrieval](#dense-passage-retrieval)
     - 設定
     - Retriever
+<<<<<<< HEAD
         - 1. BiEncoder の学習
         - 2. 文書集合のエンコード
         - 3. データセットの質問に関連する文書抽出
     - Reader
         - 4. Reader の学習
         - 5. 評価
+=======
+        1. 学習
+        2. 文書集合のエンコード
+        3. データセットの質問に関連する文書抽出
+    - Reader
+        4. hoge
+        5. 
+>>>>>>> 35d086d7db06241b8fcb065b111bcabe671acbb7
 
 
 ## 環境構築
@@ -52,6 +61,7 @@ $ bash scripts/download_data.sh <output_dir>
 |  |- test_jaqket.json
 ```
 
+<<<<<<< HEAD
 |データ|質問数|文書数|
 |:---|---:|---:|
 |訓練|17,735|-|
@@ -62,6 +72,18 @@ $ bash scripts/download_data.sh <output_dir>
 
 ### 学習データ
 
+=======
+|データ|質問数|
+|:---|---:|
+|訓練||
+|開発||
+|評価||
+|wiki|6795533|
+
+
+### 学習データ
+
+>>>>>>> 35d086d7db06241b8fcb065b111bcabe671acbb7
 以下の例に示した要素からなるリスト型の JSON ファイル
 - `question`：質問
 - `answers`：答えのリスト
@@ -118,9 +140,15 @@ id      text    title
 ![](imgs/dpr.png)
 
 より詳細な解説は、以下を参照して下さい。
+<<<<<<< HEAD
 
 > Karpukhin, Vladimir and Oguz, Barlas and Min, Sewon and Lewis, Patrick and Wu, Ledell and Edunov, Sergey and Chen, Danqi and Yih, Wen-tau. Dense Passage Retrieval for Open-Domain Question Answering (EMNLP2020) [\[paper\]](https://www.aclweb.org/anthology/2020.emnlp-main.550) [\[github\]](https://github.com/facebookresearch/DPR)
 
+=======
+
+> Karpukhin, Vladimir and Oguz, Barlas and Min, Sewon and Lewis, Patrick and Wu, Ledell and Edunov, Sergey and Chen, Danqi and Yih, Wen-tau. Dense Passage Retrieval for Open-Domain Question Answering (EMNLP2020) [\[paper\]](https://www.aclweb.org/anthology/2020.emnlp-main.550) [\[github\]](https://github.com/facebookresearch/DPR)
+
+>>>>>>> 35d086d7db06241b8fcb065b111bcabe671acbb7
 ### 設定
 
 ```bash
@@ -137,8 +165,12 @@ $ vim scripts/configs/config.pth
 
 ### Retriever
 
+<<<<<<< HEAD
 #### 1. BiEncoder の学習
 質問と文書の類似度を計算するため、質問エンコーダおよび文書エンコーダで構成される BiEncoder を学習します。デフォルトのパラメータでは、4GPU (Tesla V100-SXM2-16GB) を用いて4時間程度の学習時間を要しました。
+=======
+#### 1. 学習
+>>>>>>> 35d086d7db06241b8fcb065b111bcabe671acbb7
 - [scripts/retriever/train_retriever.sh](scripts/retriever/train_retriever.sh)
 
 ```bash
@@ -153,7 +185,10 @@ $ bash scripts/retriever/train_retriever.sh \
 ```
 
 #### 2. 文書集合のエンコード
+<<<<<<< HEAD
 質問と文書の類似度を計算する前に、文書集合（Wikipedia）を文書エンコーダでエンコードします。エンコードには、4GPU (Tesla V100-SXM2-16GB) を用いて2時間程度の実行時間を要しました。
+=======
+>>>>>>> 35d086d7db06241b8fcb065b111bcabe671acbb7
 - [scripts/retriever/encode_ctxs.sh](scripts/retriever/encode_ctxs.sh)
 
 ```bash
@@ -168,7 +203,10 @@ $ bash scripts/retriever/encode_ctxs.sh \
 ```
 
 #### 3. データセットの質問に関連する文書抽出
+<<<<<<< HEAD
 データセットの質問に関連する文書を抽出します。質問エンコーダから取得した質問エンベッディングと前項でエンコードした文書エンベッディングに対して Faiss を用いて類似度を計算します。
+=======
+>>>>>>> 35d086d7db06241b8fcb065b111bcabe671acbb7
 - [scripts/retriever/retrieve_passage.sh](scripts/retriever/retrieve_passage.sh)
 
 ```bash
@@ -215,9 +253,11 @@ $ bash scripts/raeder/train_reader.sh \
 $ exp_name="baseline"
 $ config_file="scripts/configs/reader_base.json"
 $ test_file="path/to/retrieved/test/file"
+$ model_file="path/to/model/checkpoint.pt"
 
 $ bash scripts/raeder/eval_reader.sh \
     -n $exp_name \
     -c $config_file \
-    -e $test_file
+    -e $test_file \
+    -m $model_file
 ```
