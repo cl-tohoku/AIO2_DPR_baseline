@@ -138,6 +138,7 @@ $ vim scripts/configs/config.pth
 ### Retriever
 
 #### 1. BiEncoder の学習
+質問と文書の類似度を計算するため、質問エンコーダおよび文書エンコーダで構成される BiEncoder を学習します。デフォルトのパラメータでは、4GPU (Tesla V100-SXM2-16GB) を用いて4時間程度の学習時間を要しました。
 - [scripts/retriever/train_retriever.sh](scripts/retriever/train_retriever.sh)
 
 ```bash
@@ -152,6 +153,7 @@ $ bash scripts/retriever/train_retriever.sh \
 ```
 
 #### 2. 文書集合のエンコード
+質問と文書の類似度を計算する前に、文書集合（Wikipedia）を文書エンコーダでエンコードします。エンコードには、4GPU (Tesla V100-SXM2-16GB) を用いて2時間程度の実行時間を要しました。
 - [scripts/retriever/encode_ctxs.sh](scripts/retriever/encode_ctxs.sh)
 
 ```bash
@@ -166,6 +168,7 @@ $ bash scripts/retriever/encode_ctxs.sh \
 ```
 
 #### 3. データセットの質問に関連する文書抽出
+データセットの質問に関連する文書を抽出します。質問エンコーダから取得した質問エンベッディングと前項でエンコードした文書エンベッディングに対して Faiss を用いて類似度を計算します。
 - [scripts/retriever/retrieve_passage.sh](scripts/retriever/retrieve_passage.sh)
 
 ```bash

@@ -18,7 +18,8 @@ wget -nc https://jaqket.s3-ap-northeast-1.amazonaws.com/data/dev1_questions.json
 wget -nc https://jaqket.s3-ap-northeast-1.amazonaws.com/data/dev2_questions.json -P $DEST/aio
 wget -nc https://jaqket.s3-ap-northeast-1.amazonaws.com/data/candidate_entities.json.gz -P $DEST/wiki
 
-echo "
+
+cat << END > scripts/configs/config.pth
 # dest (To create models, embeddings, etc under `$DIR_DPR/$NAME`)
 DIR_DPR=outputs
 
@@ -27,7 +28,7 @@ WIKI_FILE=$DEST/wiki/jawiki-20210503-paragraphs.tsv.gz
 TRAIN_FILE=$DEST/aio/abc_eqiden_01-12.json.gz
 DEV_FILE=$DEST/aio/aio_2020_dev.json.gz
 TEST_FILE=$DEST/aio/aio_2020_test.json.gz
-" > scripts/configs/config.pth
+END
 
 ls -R $DEST
 
