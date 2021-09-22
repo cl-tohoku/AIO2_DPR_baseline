@@ -27,9 +27,9 @@ from dpr.data.qa_validation import exact_match_score
 from dpr.data.reader_data import ReaderSample, get_best_spans, SpanPrediction, convert_retriever_results
 from dpr.models import init_reader_components
 from dpr.models.reader import create_reader_input, ReaderBatch, compute_loss
-from dpr.options import add_encoder_params, setup_args_gpu, set_seed, add_training_params, \
+from dpr.options import add_cuda_params, add_encoder_params, setup_args_gpu, set_seed, add_training_params, \
     add_reader_preprocessing_params, set_encoder_params_from_state, get_encoder_params_state, add_tokenizer_params, \
-    print_args
+    print_args, override_args
 from dpr.utils.data_utils import ShardedDataIterator, read_serialized_data_from_files, Tensorizer
 from dpr.utils.model_utils import get_schedule_linear, load_states_from_checkpoint, move_to_device, CheckpointState, \
     get_model_file, setup_for_distributed_mode, get_model_obj
@@ -142,7 +142,7 @@ class ReaderTrainer(object):
                       'warmup_steps': args.warmup_steps, 'dropout': args.dropout,
                       'gradient': args.gradient_accumulation_steps}
         suffix = '.s{}_bs{}_n{}_lr{}_warm{}_do{}_gradient_{}'.format(*parameters.values())
-        writer = SummaryWriter(log_dir=args.dir_tensorboard, filename_suffix=suffix)
+        writer = SummaryWriter(log_dir=args.tensorboard_dir, filename_suffix=suffix)
 
         for epoch in range(self.start_epoch, int(args.num_train_epochs)):
             logger.info("***** Epoch %d *****", epoch)
@@ -519,6 +519,7 @@ class ReaderTrainer(object):
 def main():
     parser = argparse.ArgumentParser()
 
+    add_cuda_params(parser)
     add_encoder_params(parser)
     add_training_params(parser)
     add_tokenizer_params(parser)
@@ -546,18 +547,22 @@ def main():
                         help="batch steps to run validation and save checkpoint")
     parser.add_argument("--output_dir", default=None, type=str,
                         help="The output directory where the model checkpoints will be written to")
-    parser.add_argument('--dir_tensorboard', default=None, type=str,
-                        help='The output directory where the tensorboard log will be written to')
     parser.add_argument('--early_stop_count', default=5, type=int)
     parser.add_argument('--early_stop', action='store_true')
     parser.add_argument('--fully_resumable', action='store_true',
                         help="Enables resumable mode by specifying global step dependent random seed before shuffling "
                              "in-batch data")
 
-    args = parser.parse_args()
+    # additional parameters
+    misc = parser.add_argument_group('Group of Additional Parameters')
+    misc.add_argument('--tensorboard_dir', type=str, default=None, help='The output directory where the tensorboard log will be written to')
+    misc.add_argument('--config_file', type=str, default=None, help='Parameter file')
 
-    if args.output_dir is not None:
-        os.makedirs(args.output_dir, exist_ok=True)
+    args = parser.parse_args()
+    if args.config_file:
+        args = override_args(args)
+
+    os.makedirs(args.output_dir, exist_ok=True)
 
     setup_args_gpu(args)
     set_seed(args)
