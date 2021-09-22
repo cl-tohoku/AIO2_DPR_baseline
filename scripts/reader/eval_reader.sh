@@ -1,59 +1,42 @@
-# path
-WORK_DIR=${path to working directory}
-# Train Reader =============================
-
-TRAIN_EPOCH=50
-DEV_EPOCH=1
-
-TRAIN_BATCH=8
-DEV_BATCH=4
-
-SEQ_LEN=256
-MAX_GRAD_NORM=2.0
-WARMUP_STEP=1237
-LEARNING_RATE=2e-5
-GRADIENT_ACCUMULATION_STEP=1
-DROPOUT=0.2
-SEED=1
-PASSAGE_PER_QUESTION=24
-PASSAGE_PER_QUESTION_PREDICT=100
-
+#!/bin/bash
+USAGE="bash $0 [-n NAME] [-e EVAL_FILE] [-g GPU]"
 DATE=`date +%Y%m%d-%H%M`
-# Train Reader ======================================
-encoder_params="
---sequence_length $SEQ_LEN
---encoder_model_type hf_bert
---pretrained_model_cfg cl-tohoku/bert-base-japanese-whole-word-masking
-"
 
-training_params="
---num_train_epochs $TRAIN_EPOCH
---batch_size $TRAIN_BATCH
---dev_batch_size $DEV_BATCH
---max_grad_norm $MAX_GRAD_NORM
---warmup_steps $WARMUP_STEP
---learning_rate $LEARNING_RATE
---dropout $DROPOUT
---gradient_accumulation_steps $GRADIENT_ACCUMULATION_STEP
---seed $SEED
---passages_per_question $PASSAGE_PER_QUESTION
---passages_per_question_predict $PASSAGE_PER_QUESTION_PREDICT
-"
+while getopts n:c:e:g: opt ; do
+  case ${opt} in
+    n ) FLG_N="TRUE"; NAME=${OPTARG};;
+    e ) FLG_E="TRUE"; EVAL_FILE=${OPTARG};;
+    g ) FLG_G="TRUE"; GPU=${OPTARG};;
+    m ) FLG_M="TRUE"; MODEL=${OPTARG};;
+    * ) echo ${USAGE} 1>&2; exit 1 ;;
+  esac
+done
 
-FI_TEST=${path tp test dataset}
-OUT_DIR=${WORK_DIR}/outputs
-MODEL_DIR=${OUT_DIR}/models
-PREDICTION_RESULTS_DIR=${OUT_DIR}/prediction_results
-TENSORBOARD_DIR=${OUT_DIR}/tensorboard_dir
-mkdir -p ${OUT_DIR} ${MODEL_DIR} ${PREDICTION_RESULTS_DIR} ${TENSORBOARD_DIR}
+test "${FLG_N}" != "TRUE" && (echo ${USAGE} && exit 1)
+test "${FLG_E}" != "TRUE" && (echo ${USAGE} && exit 1)
+test "${FLG_G}" == "TRUE" && export CUDA_VISIBLE_DEVICES=$GPU
+test "${FLG_M}" == "TRUE" && (echo ${USAGE} && exit 1)
 
-CUDA_VISIBLE_DEVICES=0 \
-python ${WORK_DIR}/src/reader_train.py \
-    ${encoder_params} \
-    ${training_params} \
-    --fp16 \
-    --dev_file ${FI_TEST} \
-    --output_dir ${MODEL_DIR} \
-    --dir_tensorboard ${TENSORBOARD_DIR} \
-    --loss_and_score_results_dir ${OUT_DIR} \
-| tee ${OUT_DIR}/reader_train_${DATE}.log
+
+# Eval Reader =============================
+
+set -ex
+source scipts/configs/config.pth
+
+DIR_PROJECT=$DIR_DPR/$NAME
+# mkdir -p $DIR_PROJECT/reader
+# cp $CONFIG $DIR_PROJECT/reader/hps.json
+# cp $0 $DIR_PROJECT/reader/run.sh
+
+LOF_FILE=$DIR_PROJECT/logs/reader/eval_${DATE}.log
+mkdir -p `dirname $LOG_FILE`
+echo "# bash $0 $@" > $LOG_FILE
+
+python train_reader.py \
+    --dev_file $EVAL_FILE \
+    --model_file $MODEL \
+    --output_dir $DIR_PROJECT/reader \
+    --loss_and_score_results_dir $DIR_PROJECT/reader/train_log \
+    --prediction_results_dir $DIR_PROJECT/readed \
+    --config $DIR_PROJECT/reader/hps.json \
+| tee $LOG_FILE

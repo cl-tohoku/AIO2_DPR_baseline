@@ -1,18 +1,29 @@
+# AI王 〜クイズAI日本一決定戦〜 2021
+
 ![AIO](imgs/aio.png)
 
-# AI王 〜クイズAI日本一決定戦〜 2021
 オープンドメイン質問応答
 - [AI王 〜クイズAI日本一決定戦〜](https://www.nlp.ecei.tohoku.ac.jp/projects/aio/)
-- 昨年度の概要は [こちら](#)
+- 昨年度の概要は [こちら](https://sites.google.com/view/nlp2021-aio/)
 
-## 目次
+### 目次
+- [環境構築](#環境構築)
+- [データセット](#データセット)
+    - ダウンロード
+    - 学習データ
+    - 文書集合（Wikipedia）
+- [Dense Passage Retrieval](#dense-passage-retrieval)
+    - 設定
+    - Retriever
+        - 1. BiEncoder の学習
+        - 2. 文書集合のエンコード
+        - 3. データセットの質問に関連する文書抽出
+    - Reader
+        - 4. Reader の学習
+        - 5. 評価
 
-- [Setup](#Setup)
-    - 環境構築
-    - データセット
 
-
-## セットアップ
+## 環境構築
 
 ```bash
 $ pip install pip-tools
@@ -26,7 +37,8 @@ $ pip-sync
 > - https://www.nlp.ecei.tohoku.ac.jp/projects/jaqket/
 > - 鈴木正敏, 鈴木潤, 松田耕史, ⻄田京介, 井之上直也. JAQKET:クイズを題材にした日本語QAデータセットの構築. 言語処理学会第26回年次大会(NLP2020) [\[PDF\]](https://www.anlp.jp/proceedings/annual_meeting/2020/pdf_dir/P2-24.pdf)
 
-### Download
+
+### ダウンロード
 
 ```bash
 $ bash scripts/download_data.sh <output_dir>
@@ -40,27 +52,25 @@ $ bash scripts/download_data.sh <output_dir>
 |  |- test_jaqket.json
 ```
 
-#### Statistics
+|データ|質問数|文書数|
+|:---|---:|---:|
+|訓練|17,735|-|
+|開発|1,992|-|
+|評価|2,000|-|
+|wiki|-|6,795,533|
 
-|データ|質問数|
-|:---|---:|
-|訓練||
-|開発||
-|評価||
-|wiki|6795533|
 
-#### Jaqket Format
+### 学習データ
 
-The expected data format is a list of entry examples, where each entry example is a dictionary containing
-
-- `question`: question text
-- `answers`: list of answer text
-- `positive_ctxs`: a list of positive passages where each item is a dictionary containing following:
-    - `id`: passage id
-    - `title`: article title
-    - `text`: passage text
-- `negative_ctxs`: a list of negative passages (train 内で定義される)
-- `hard_negative_ctxs`: a list of hard negative passages
+以下の例に示した要素からなるリスト型の JSON ファイル
+- `question`：質問
+- `answers`：答えのリスト
+- `positive_ctxs`：正例文書。以下の辞書で構成されたリスト形式。
+    - `id`：文書インデックス
+    - `title`：Wikipedia のタイトル
+    - `text`：Wikipedia の記事 
+- `negative_ctxs`：負例文書（学習中に再定義される）
+- `hard_negative_ctxs`: ハード負例文書。`positive_ctxs` と同様の形式。
 
 ```json
 {
@@ -86,9 +96,12 @@ The expected data format is a list of entry examples, where each entry example i
 }
 ```
 
-#### Wikipedia Data Format
+### 文書集合（Wikipedia）
 
-The wikipedia data is a format of tsv, where each entry example is a dictionary containing. 
+- 以下のアイテムで構成される TSV 形式のデータ（2021.05.03 時点のものを使用）
+    - `id`：文書インデックス
+    - `text`：Wikipedia の記事
+    - `title`：Wikipedia のタイトル
 
 ```tsv
 id      text    title
@@ -96,84 +109,115 @@ id      text    title
 ```
 
 
-## Dense Passage Retrieval 
+## Dense Passage Retrieval
+
+本実装では、オープンドメイン質問応答に取り組むための二つのモジュールを学習する<br>
+1. 与えられた質問に対して、文書集合から関連する文書を検索するモジュール（Retriever）
+2. 検索した関連文書の中から質問の答えとなる箇所を特定するモジュール（Reader）
 
 ![](imgs/dpr.png)
 
+より詳細な解説は、以下を参照して下さい。
 
-### Settings
+> Karpukhin, Vladimir and Oguz, Barlas and Min, Sewon and Lewis, Patrick and Wu, Ledell and Edunov, Sergey and Chen, Danqi and Yih, Wen-tau. Dense Passage Retrieval for Open-Domain Question Answering (EMNLP2020) [\[paper\]](https://www.aclweb.org/anthology/2020.emnlp-main.550) [\[github\]](https://github.com/facebookresearch/DPR)
+
+### 設定
 
 ```bash
 $ vim scripts/configs/config.pth
 ```
 
+- 実装を始める前に以下の項目を設定して下さい。
+    - `WIKI_FILE`：Wikipedia の文書ファイル
+    - `TRAIN_FILE`：訓練セット
+    - `DEV_FILE`：開発セット
+    - `TEST_FILE`：評価セット
+    - `DIR_DPR`：モデルやエンベッディングの保存先
+ 
+
 ### Retriever
 
-#### 1. 学習
+#### 1. BiEncoder の学習
+質問と文書の類似度を計算するため、質問エンコーダおよび文書エンコーダで構成される BiEncoder を学習します。デフォルトのパラメータでは、4GPU (Tesla V100-SXM2-16GB) を用いて4時間程度の学習時間を要しました。
+- [scripts/retriever/train_retriever.sh](scripts/retriever/train_retriever.sh)
 
 ```bash
-# bash scripts/retriever/train_retriever.sh
+# 実行例
 
-$ python train_dense_encoder.py \
-  --train_file $TRAIN_FILE \
-  --dev_file $DEV_FILE \
-  --output_dir $DIR_PROJECT/retriever \
-  --config $DIR_PROJECT/retriever/hps.json
+$ exp_name="baseline"
+$ config_file="scripts/configs/retriever_base.json"
+
+$ bash scripts/retriever/train_retriever.sh \
+    -n $exp_name \
+    -c $config_file
 ```
 
 #### 2. 文書集合のエンコード
+質問と文書の類似度を計算する前に、文書集合（Wikipedia）を文書エンコーダでエンコードします。エンコードには、4GPU (Tesla V100-SXM2-16GB) を用いて2時間程度の実行時間を要しました。
+- [scripts/retriever/encode_ctxs.sh](scripts/retriever/encode_ctxs.sh)
 
 ```bash
-# bash scripts/retriever/encode_ctxs.sh
-$ python generate_dense_embeddings.py \
-  --batch_size 512 \
-  --model_file <model> \
-  --ctx_file <wikipedia> \
-  --output_dir $DIR_PROJECT/embeddings
+# 実行例
+
+$ exp_name="baseline"
+$ model_file="path/to/model"
+
+$ bash scripts/retriever/encode_ctxs.sh \
+    -n $exp_name \
+    -m $model
 ```
 
 #### 3. データセットの質問に関連する文書抽出
+データセットの質問に関連する文書を抽出します。質問エンコーダから取得した質問エンベッディングと前項でエンコードした文書エンベッディングに対して Faiss を用いて類似度を計算します。
+- [scripts/retriever/retrieve_passage.sh](scripts/retriever/retrieve_passage.sh)
 
 ```bash
-# bash scripts/retriever/retrieve_passage.sh
+# 実行例
 
-$ python dense_retriever.py \
-    --n-docs 100 \
-    --validation_workers 32 \
-    --batch_size 64 \
-    --projection_dim 768 \
-    --model_file $MODEL \
-    --ctx_file $WIKI_FILE \
-    --encoded_ctx_file $EMBEDDING \
-    --qa_file ${QA_FILES[$KEY]} \
-    --out_file $FO_FILE
+$ exp_name="baseline"
+$ model="path/to/model"
+$ embed="path/to/embeddings"
+
+$ bash scripts/retriever/retrieve_passage.sh \
+    -n $exp_name \
+    -m $model \
+    -e $embed
 ```
 
 ### Reader
 
-#### 4. 学習
+#### 4. Reader の学習
+関連文書から解答のスパンを抽出するモデルを学習します。4GPU (Tesla V100-SXM2-16GB) を用いて6時間程度の実行時間を要しました。
+- [scripts/reader/train_reader.sh](scripts/reader/train_reader.sh)
 
 ```bash
-# bash sscripts/raeder/train_reader.sh
+# 実行例
 
-$ python ${WORK_DIR}/src/reader_train.py \
-    --train_file ${FI_TRAIN} \
-    --dev_file ${FI_DEV} \
-    --output_dir ${MODEL_DIR} \
-    --dir_tensorboard ${TENSORBOARD_DIR} \
-    --loss_and_score_results_dir ${OUT_DIR} \
-    --prediction_results_dir ${PREDICTION_RESULTS_DIR} \
+$ exp_name="baseline"
+$ config_file="scripts/configs/reader_base.json"
+$ train_file="path/to/retrieved/train/file"
+$ dev_file="path/to/retrieved/dev/file"
+
+$ bash scripts/raeder/train_reader.sh \
+    -n $exp_name \
+    -c $config_file \
+    -t $train_file \
+    -d $dev_file
 ```
 
 #### 5. 評価
+学習したreaderモデルを用いて評価します。
+- [scripts/reader/eval_reader.sh](scripts/reader/eval_reader.sh)
 
 ```bash
-# bash sscripts/raeder/eval_reader.sh
+# 実行例
 
-$ python ${WORK_DIR}/src/reader_train.py \
-    --dev_file ${FI_TEST} \
-    --output_dir ${MODEL_DIR} \
-    --dir_tensorboard ${TENSORBOARD_DIR} \
-    --loss_and_score_results_dir ${OUT_DIR} \
-    --prediction_results_dir ${PREDICTION_RESULTS_DIR} \
+$ exp_name="baseline"
+$ config_file="scripts/configs/reader_base.json"
+$ test_file="path/to/retrieved/test/file"
+
+$ bash scripts/raeder/eval_reader.sh \
+    -n $exp_name \
+    -c $config_file \
+    -e $test_file
 ```
