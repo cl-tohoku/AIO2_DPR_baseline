@@ -440,10 +440,10 @@ class BiEncoderTrainer(object):
                 logger.info('Avg. loss per last %d batches: %f', rolling_loss_step, latest_rolling_train_av_loss)
                 rolling_train_loss = 0.0
 
-            if data_iteration % eval_step == 0:
-                logger.info('Validation: Epoch: %d Step: %d/%d', epoch, data_iteration, epoch_batches)
-                self.validate_and_save(epoch, train_data_iterator.get_iteration(), scheduler, eval_iterator=dev_data_iterator)
-                self.biencoder.train()
+            # if data_iteration % eval_step == 0:
+            #     logger.info('Validation: Epoch: %d Step: %d/%d', epoch, data_iteration, epoch_batches)
+            #     self.validate_and_save(epoch, train_data_iterator.get_iteration(), scheduler, eval_iterator=dev_data_iterator)
+            #     self.biencoder.train()
 
         valid_loss, valid_accuracy, average_rank = self.validate_and_save(epoch, data_iteration, scheduler, eval_iterator=dev_data_iterator)
         epoch_loss = (epoch_loss / epoch_batches) if epoch_batches > 0 else 0
