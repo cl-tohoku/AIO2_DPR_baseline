@@ -191,7 +191,7 @@ class ReaderTrainer(object):
             cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=False)  # 毎epochごとにモデルを保存
             logger.info('Saved checkpoint to %s', cp_name)
 
-            if reader_validation_score < (self.best_validation_result or 0):
+            if reader_validation_score > (self.best_validation_result or 0):
                 self.best_validation_result = reader_validation_score
                 self.best_cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=True)
                 logger.info('New Best validation checkpoint %s', cp_name)

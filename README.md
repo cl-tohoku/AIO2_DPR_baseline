@@ -187,6 +187,7 @@ $ bash scripts/retriever/retrieve_passage.sh \
 ### Reader
 
 #### 4. Reader の学習
+関連文書から解答のスパンを抽出するモデルを学習します。4GPU (Tesla V100-SXM2-16GB) を用いて6時間程度の実行時間を要しました。
 - [scripts/reader/train_reader.sh](scripts/reader/train_reader.sh)
 
 ```bash
@@ -205,6 +206,7 @@ $ bash scripts/raeder/train_reader.sh \
 ```
 
 #### 5. 評価
+学習したreaderモデルを用いて評価します。
 - [scripts/reader/eval_reader.sh](scripts/reader/eval_reader.sh)
 
 ```bash
