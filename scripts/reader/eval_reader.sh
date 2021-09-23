@@ -7,7 +7,6 @@ while getopts n:c:e:g: opt ; do
     n ) FLG_N="TRUE"; NAME=${OPTARG};;
     e ) FLG_E="TRUE"; EVAL_FILE=${OPTARG};;
     g ) FLG_G="TRUE"; GPU=${OPTARG};;
-    m ) FLG_M="TRUE"; MODEL=${OPTARG};;
     * ) echo ${USAGE} 1>&2; exit 1 ;;
   esac
 done
@@ -15,7 +14,6 @@ done
 test "${FLG_N}" != "TRUE" && (echo ${USAGE} && exit 1)
 test "${FLG_E}" != "TRUE" && (echo ${USAGE} && exit 1)
 test "${FLG_G}" == "TRUE" && export CUDA_VISIBLE_DEVICES=$GPU
-test "${FLG_M}" == "TRUE" && (echo ${USAGE} && exit 1)
 
 
 # Eval Reader =============================
@@ -34,7 +32,6 @@ echo "# bash $0 $@" > $LOG_FILE
 
 python train_reader.py \
     --dev_file $EVAL_FILE \
-    --model_file $MODEL \
     --output_dir $DIR_PROJECT/reader \
     --loss_and_score_results_dir $DIR_PROJECT/reader/train_log \
     --prediction_results_dir $DIR_PROJECT/readed \

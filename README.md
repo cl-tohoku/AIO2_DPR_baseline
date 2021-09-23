@@ -115,7 +115,7 @@ id      text    title
 1. 与えられた質問に対して、文書集合から関連する文書を検索するモジュール（Retriever）
 2. 検索した関連文書の中から質問の答えとなる箇所を特定するモジュール（Reader）
 
-![](imgs/dpr.png)
+![](imgs/open-qa.png)
 
 より詳細な解説は、以下を参照して下さい。
 
@@ -136,6 +136,8 @@ $ vim scripts/configs/config.pth
  
 
 ### Retriever
+
+![retriever](imgs/retriever.png)
 
 #### 1. BiEncoder の学習
 質問と文書の類似度を計算するため、質問エンコーダおよび文書エンコーダで構成される BiEncoder を学習します。デフォルトのパラメータでは、4GPU (Tesla V100-SXM2-16GB) を用いて4時間程度の学習時間を要しました。
@@ -187,7 +189,6 @@ $ bash scripts/retriever/retrieve_passage.sh \
 ### Reader
 
 #### 4. Reader の学習
-関連文書から解答のスパンを抽出するモデルを学習します。4GPU (Tesla V100-SXM2-16GB) を用いて6時間程度の実行時間を要しました。
 - [scripts/reader/train_reader.sh](scripts/reader/train_reader.sh)
 
 ```bash
@@ -206,7 +207,6 @@ $ bash scripts/raeder/train_reader.sh \
 ```
 
 #### 5. 評価
-学習したreaderモデルを用いて評価します。
 - [scripts/reader/eval_reader.sh](scripts/reader/eval_reader.sh)
 
 ```bash

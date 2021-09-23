@@ -2,12 +2,6 @@
 **/outputs/
 **/work/
 **/tmp/
-**/lib/
 
-**/*debug.json
-**/log*
-
-scripts/configs/config.pth
-requirements.txt
 .python-version
-
+**/*debug.json
