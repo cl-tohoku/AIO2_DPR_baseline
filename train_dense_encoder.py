@@ -152,8 +152,8 @@ class BiEncoderTrainer(object):
             logger.info("Loading scheduler state %s", self.scheduler_state)
             scheduler.load_state_dict(self.scheduler_state)
 
-        # eval_step = math.ceil(updates_per_epoch / args.eval_per_epoch)
-        # logger.info("  Eval step = %d", eval_step)
+        eval_step = math.ceil(updates_per_epoch / args.eval_per_epoch)
+        logger.info("  Eval step = %d", eval_step)
         logger.info("***** Training *****")
 
         epoch_scores = []
@@ -161,8 +161,7 @@ class BiEncoderTrainer(object):
         with open(fo_score, 'w') as fo_jsl:
             for epoch in range(self.start_epoch, int(args.num_train_epochs)):
                 logger.info("***** Epoch %d/%d *****", epoch, args.num_train_epochs)
-                do_save = ((epoch+1) % args.eval_per_epoch == 0)    # 0 start
-                epoch_score = self._train_epoch(scheduler, epoch, train_iterator, dev_iterator, do_save=do_save)
+                epoch_score = self._train_epoch(scheduler, epoch, eval_step, train_iterator, dev_iterator)
                 epoch_scores.append(epoch_score)
                 fo_jsl.write(json.dumps(epoch_score, ensure_ascii=False) + '\n')
             logger.info(f'Write score file @ {fo_jsl.name}')
@@ -191,7 +190,7 @@ class BiEncoderTrainer(object):
                 #     best_epoch = epoch
         logger.info(f'Write tensorboard log file @ {dest}')
 
-    def validate_and_save(self, epoch:int, iteration:int, scheduler, eval_iterator=None, do_save=True):
+    def validate_and_save(self, epoch:int, iteration:int, scheduler, eval_iterator=None):
         args = self.args
         # for distributed mode, save checkpoint for only one process
         # save_cp = args.local_rank in [-1, 0]
@@ -199,8 +198,7 @@ class BiEncoderTrainer(object):
         average_rank = self.validate_average_rank(data_iterator=eval_iterator)
         validation_loss, correct_ratio = self.validate_nll(data_iterator=eval_iterator)
 
-        if do_save:
-            cp_name = self._save_checkpoint(scheduler, epoch, iteration)
+        cp_name = self._save_checkpoint(scheduler, epoch, iteration)
         # if save_cp:
         #     cp_name = self._save_checkpoint(scheduler, epoch, iteration)
         #     logger.info('Saved checkpoint to %s', cp_name)
@@ -365,8 +363,8 @@ class BiEncoderTrainer(object):
         logger.info('Av.rank validation: average rank %s, total questions=%d', av_rank, q_num)
         return av_rank
 
-    def _train_epoch(self, scheduler, epoch: int,
-            train_data_iterator: ShardedDataIterator, dev_data_iterator: ShardedDataIterator, do_save:bool=True):
+    def _train_epoch(self, scheduler, epoch: int, eval_step: int,
+                     train_data_iterator: ShardedDataIterator, dev_data_iterator: ShardedDataIterator):
 
         args = self.args
         rolling_train_loss = 0.0
@@ -442,12 +440,12 @@ class BiEncoderTrainer(object):
                 logger.info('Avg. loss per last %d batches: %f', rolling_loss_step, latest_rolling_train_av_loss)
                 rolling_train_loss = 0.0
 
-            # if data_iteration % eval_step == 0:
-            #     logger.info('Validation: Epoch: %d Step: %d/%d', epoch, data_iteration, epoch_batches)
-            #     self.validate_and_save(epoch, train_data_iterator.get_iteration(), scheduler, eval_iterator=dev_data_iterator)
-            #     self.biencoder.train()
+            if data_iteration % eval_step == 0:
+                logger.info('Validation: Epoch: %d Step: %d/%d', epoch, data_iteration, epoch_batches)
+                self.validate_and_save(epoch, train_data_iterator.get_iteration(), scheduler, eval_iterator=dev_data_iterator)
+                self.biencoder.train()
 
-        valid_loss, valid_accuracy, average_rank = self.validate_and_save(epoch, data_iteration, scheduler, eval_iterator=dev_data_iterator, do_save=do_save)
+        valid_loss, valid_accuracy, average_rank = self.validate_and_save(epoch, data_iteration, scheduler, eval_iterator=dev_data_iterator)
         epoch_loss = (epoch_loss / epoch_batches) if epoch_batches > 0 else 0
         train_accuracy = float(epoch_correct_predictions / total_samples) if total_samples>0 else -np.inf
         logger.info('Av Loss per epoch=%f', epoch_loss)
@@ -645,7 +643,7 @@ def create_arg_parser():
 
     # additional parameters
     misc = parser.add_argument_group('Group of Additional Parameters')
-    misc.add_argument('--tensorboard_dir', type=str, default=None, help='The output directory where the tensorboard log will be written to')
+    misc.add_argument('--tensorboard_dir', type=str, default=None, help='Destination of tensorboard')
     misc.add_argument('--config_file', type=str, default=None, help='Parameter file')
 
     return parser
@@ -669,7 +667,8 @@ def main():
     if args.config_file:
         args = override_args(args)
     
-    os.makedirs(args.output_dir, exist_ok=True)
+    if args.output_dir is not None:
+        os.makedirs(args.output_dir, exist_ok=True)
 
     # save argparse parameters @ args.output_dir
     config_file = os.path.join(args.output_dir, 'hps.json')

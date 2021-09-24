@@ -52,7 +52,7 @@ def read_data_from_json_files(paths: List[str], upsample_rates: List = None) -> 
         upsample_rates = [1] * len(paths)
     assert len(upsample_rates) == len(paths), 'up-sample rates parameter doesn\'t match input files amount'
     for i, path in enumerate(paths):
-        with gzip.open(path, 'rt') if path.endswith('.json.gz') else open(path, 'r', encoding="utf-8") as f:
+        with open(path, 'r', encoding="utf-8") as f:
             logger.info('Reading file %s' % path)
             data = json.load(f)
             upsample_factor = int(upsample_rates[i]) # 1
@@ -94,13 +94,12 @@ def read_ctxs(ctxs_file, return_dict=False):
     logger.info('Reading file %s' % ctxs_file)
     with gzip.open(ctxs_file, 'rt') if ctxs_file.endswith('.gz') else open(ctxs_file) as fi:
         if ctxs_file.endswith(('.csv', '.tsv', '.csv.gz', '.tsv.gz')):
-            sep = '\t' if ctxs_file.endswith(('.tsv', '.tsv.gz')) else ','
+            sep = '\t' if ctxs_file.endswith('.tsv') else ','
             for i, line in enumerate(fi):
                 line = line.strip().split(sep)
                 if i == 0:
                     keys = line
                 assert len(line) == len(keys)
-                line[keys.index('text')] = line[keys.index('text')].strip('"')
                 if return_dict:
                     rows[line[keys.index('id')]] = {k:v for k,v in zip(keys, line) if k != 'id'}
                 else:

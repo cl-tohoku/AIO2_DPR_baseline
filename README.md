@@ -2,10 +2,11 @@
 
 ![AIO](imgs/aio.png)
 
+オープンドメイン質問応答
 - [AI王 〜クイズAI日本一決定戦〜](https://www.nlp.ecei.tohoku.ac.jp/projects/aio/)
 - 昨年度の概要は [こちら](https://sites.google.com/view/nlp2021-aio/)
 
-## 目次
+### 目次
 - [環境構築](#環境構築)
 - [データセット](#データセット)
     - ダウンロード
@@ -64,12 +65,12 @@ $ bash scripts/download_data.sh <output_dir>
 以下の例に示した要素からなるリスト型の JSON ファイル
 - `question`：質問
 - `answers`：答えのリスト
-- `positive_ctxs`：正例文書（答えを含む文書）。以下の辞書で構成されたリスト形式。
+- `positive_ctxs`：正例文書。以下の辞書で構成されたリスト形式。
     - `id`：文書インデックス
     - `title`：Wikipedia のタイトル
     - `text`：Wikipedia の記事 
-- `negative_ctxs`：負例文書（インバッチネガティブ：ミニバッチ内の他の質問に対する正例文書）。学習中に定義される。
-- `hard_negative_ctxs`: ハード負例文書（質問に類似するが答えを含まない文書。）。`positive_ctxs` と同様の形式。
+- `negative_ctxs`：負例文書（学習中に再定義される）
+- `hard_negative_ctxs`: ハード負例文書。`positive_ctxs` と同様の形式。
 
 ```json
 {
@@ -114,7 +115,7 @@ id      text    title
 1. 与えられた質問に対して、文書集合から関連する文書を検索するモジュール（Retriever）
 2. 検索した関連文書の中から質問の答えとなる箇所を特定するモジュール（Reader）
 
-![](imgs/open-qa.png)
+![](imgs/dpr.png)
 
 より詳細な解説は、以下を参照して下さい。
 
@@ -132,11 +133,9 @@ $ vim scripts/configs/config.pth
     - `DEV_FILE`：開発セット
     - `TEST_FILE`：評価セット
     - `DIR_DPR`：モデルやエンベッディングの保存先
-
+ 
 
 ### Retriever
-
-![retriever](imgs/retriever.png)
 
 #### 1. BiEncoder の学習
 質問と文書の類似度を計算するため、質問エンコーダおよび文書エンコーダで構成される BiEncoder を学習します。デフォルトのパラメータでは、4GPU (Tesla V100-SXM2-16GB) を用いて4時間程度の学習時間を要しました。
@@ -151,15 +150,6 @@ $ config_file="scripts/configs/retriever_base.json"
 $ bash scripts/retriever/train_retriever.sh \
     -n $exp_name \
     -c $config_file
-
-# 実行結果
-
-$ ls $DIR_DPR/$exp_name/retriever
-    tensorboard/                    # tensorboard ログディレクトリ (if `--tensorboard_logdir`)
-    dpr_biencoder.*.*.pt            # モデルファイル
-    hps.json                        # パラメータ
-    run.sh                          # 実行時シェルスクリプト 
-    score_train_retriever_*.jsonl   # ログファイル
 ```
 
 #### 2. 文書集合のエンコード
@@ -175,11 +165,6 @@ $ model_file="path/to/model"
 $ bash scripts/retriever/encode_ctxs.sh \
     -n $exp_name \
     -m $model
-
-# 実行結果
-
-$ ls $DIR_DPR/$exp_name/embeddings
-    emb_${model}.pickle             # 文書エンベッディング
 ```
 
 #### 3. データセットの質問に関連する文書抽出
@@ -197,26 +182,12 @@ $ bash scripts/retriever/retrieve_passage.sh \
     -n $exp_name \
     -m $model \
     -e $embed
-
-# 実行結果
-
-$ ls $DIR_DPR/$exp_name/retrieved
-    train_*.*.json   dev_*.*.json   test_*.*.json   # 予測結果（reader 学習データ）
-    train_*.*.tsv    dev_*.*.tsv    test_*.*.tsv    # 予測スコア（Acc@k を含む）
 ```
-
-__Acc@k__
-- 抽出した上位 k 件までの文書に解答が含まれている質問数の割合
-
-|データ|Acc@1|Acc@5|Acc@10|Acc@50|Acc@100|
-|:---|---:|---:|---:|---:|---:|
-|訓練セット|0.4016|0.6538|0.7324|0.8458|0.8720|
-|評価セット|0.3549|0.5919|0.6802|0.8363|0.8881|
-
 
 ### Reader
 
 #### 4. Reader の学習
+関連文書から解答のスパンを抽出するモデルを学習します。4GPU (Tesla V100-SXM2-16GB) を用いて6時間程度の実行時間を要しました。
 - [scripts/reader/train_reader.sh](scripts/reader/train_reader.sh)
 
 ```bash
@@ -235,6 +206,7 @@ $ bash scripts/raeder/train_reader.sh \
 ```
 
 #### 5. 評価
+学習したreaderモデルを用いて評価します。
 - [scripts/reader/eval_reader.sh](scripts/reader/eval_reader.sh)
 
 ```bash

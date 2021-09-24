@@ -141,7 +141,7 @@ class ReaderTrainer(object):
         parameters = {'seed': args.seed, 'bsize': args.batch_size, 'lr': args.learning_rate,
                       'warmup_steps': args.warmup_steps, 'dropout': args.dropout,
                       'gradient': args.gradient_accumulation_steps}
-        suffix = '.s{}_bs{}_n{}_lr{}_warm{}_do{}_gradient_{}'.format(*parameters.values())
+        suffix = '.s{}_bs{}_lr{}_warm{}_do{}_gradient_{}'.format(*parameters.values())
         writer = SummaryWriter(log_dir=args.tensorboard_dir, filename_suffix=suffix)
 
         for epoch in range(self.start_epoch, int(args.num_train_epochs)):
@@ -157,7 +157,7 @@ class ReaderTrainer(object):
                 if epoch_score['valid_score'] < max_score:  # 最大スコアを下回った場合カウントを1つ進める
                     stop_count += 1
                     if stop_count == args.early_stop_count:
-                        break # 訓練終了
+                        break  # 訓練終了
                 else:
                     max_score = epoch_score['valid_score']
                     stop_count = 0
@@ -165,19 +165,10 @@ class ReaderTrainer(object):
         if args.local_rank in [-1, 0]:
             logger.info('Training finished. Best validation checkpoint %s', self.best_cp_name)
 
-        """"        
-        max_score, best_epoch = -np.inf, 0
-        with open(args.loss_and_score_results_dir  +'/reader_train_score' + suffix + '.tsv', 'w') as fo_train, \
-            open(args.loss_and_score_results_dir + '/reader_dev_score' + suffix + '.tsv', 'w') as fo_dev:
-            fo_train.write('epoch\tloss\n')
+        with open(args.prediction_results_dir + '/reader_dev_score' + suffix + '.tsv', 'w') as fo_dev:
             fo_dev.write('epoch\tscore\n')
             for epoch, epoch_score in enumerate(epoch_scores):
-                if epoch_score['dev_score'] < max_score:
-                    max_score = epoch_score['dev_score']
-                    best_epoch = epoch
-                fo_train.write('{}\t{}\n'.format(epoch, epoch_score['train_loss']))
                 fo_dev.write('{}\t{}\n'.format(epoch, epoch_score['dev_score']))
-        """
 
         return
 
@@ -191,7 +182,7 @@ class ReaderTrainer(object):
             cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=False)  # 毎epochごとにモデルを保存
             logger.info('Saved checkpoint to %s', cp_name)
 
-            if reader_validation_score < (self.best_validation_result or 0):
+            if reader_validation_score > (self.best_validation_result or 0):
                 self.best_validation_result = reader_validation_score
                 self.best_cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=True)
                 logger.info('New Best validation checkpoint %s', cp_name)
@@ -335,10 +326,11 @@ class ReaderTrainer(object):
         model_to_save = get_model_obj(self.reader)
         if is_best:  # save best model
             cp = os.path.join(args.output_dir,
-                              args.checkpoint_file_name + '.' + 'best' + ('.' + str(offset) if offset > 0 else ''))
-        else:  # 毎epoch保存
-            cp = os.path.join(args.output_dir,
-                              args.checkpoint_file_name + '.' + str(epoch) + ('.' + str(offset) if offset > 0 else ''))
+                        args.checkpoint_file_name + '.' + 'best' + ('.' + str(offset) if offset > 0 else ''))
+        else:
+            if (epoch + 1) % args.num_save_epoch == 0:  # 指定epoch数毎に保存
+                cp = os.path.join(args.output_dir,
+                        args.checkpoint_file_name + '.' + str(epoch) + ('.' + str(offset) if offset > 0 else ''))
 
         meta_params = get_encoder_params_state(args)
 
@@ -537,8 +529,6 @@ def main():
     parser.add_argument('--eval_top_docs', nargs='+', type=int,
                         help="top retrival passages thresholds to analyze prediction results for")
     parser.add_argument('--checkpoint_file_name', type=str, default='dpr_reader')
-    parser.add_argument('--prediction_results_file', type=str, help='path to a file to write prediction results to')
-    parser.add_argument('--loss_and_score_results_dir', type=str)
     parser.add_argument('--prediction_results_dir', type=str)
 
     # training parameters
@@ -548,6 +538,7 @@ def main():
                         help="The output directory where the model checkpoints will be written to")
     parser.add_argument('--early_stop_count', default=5, type=int)
     parser.add_argument('--early_stop', action='store_true')
+    parser.add_argument('--num_save_epoch', type=int, default=1)
     parser.add_argument('--fully_resumable', action='store_true',
                         help="Enables resumable mode by specifying global step dependent random seed before shuffling "
                              "in-batch data")
