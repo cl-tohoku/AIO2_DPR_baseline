@@ -39,6 +39,6 @@
 
     "no_cuda": false,
     "local_rank": -1,
-    "fp16": false,
+    "fp16": true,
     "fp16_opt_level": "O1"
 }
