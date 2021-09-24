@@ -217,7 +217,7 @@ __Acc@k__
 ### Reader
 
 #### 4. Reader の学習
-関連文書を用いてQAの読解モデルを学習します。学習には、4GPU (Tesla V100-SXM2-16GB) を用いて2時間程度の実行時間を要しました。
+関連文書を用いて QA の読解モデルを学習します。学習には、4GPU (Tesla V100-SXM2-16GB) を用いて2時間程度の実行時間を要しました。
 - [scripts/reader/train_reader.sh](scripts/reader/train_reader.sh)
 
 ```bash
@@ -233,6 +233,10 @@ $ bash scripts/raeder/train_reader.sh \
     -c $config_file \
     -t $train_file \
     -d $dev_file
+
+# 実行結果
+
+$ ls $DIR_DPR/$exp_name/reader
 ```
 
 #### 5. 評価
@@ -245,13 +249,15 @@ $ bash scripts/raeder/train_reader.sh \
 $ exp_name="baseline"
 $ config_file="scripts/configs/reader_base.json"
 $ test_file="path/to/retrieved/test/file"
-$ model_file="path/to/checkpoint/file"
+$ model_file="path/to/reader/file"
 
 $ bash scripts/raeder/eval_reader.sh \
     -n $exp_name \
     -c $config_file \
     -e $test_file \
     -m $model_file
+
+$ ls $DIR_DPR/$exp_name/readed
 ```
 
 __Accuracy__
@@ -261,3 +267,4 @@ __Accuracy__
 |:---|---:|
 |訓練セット|0.4282|
 |評価セット|0.4625|
+

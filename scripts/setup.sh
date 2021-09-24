@@ -13,6 +13,7 @@ spacy==2.3.2
 faiss-cpu==1.6.3
 pandas==1.1.4
 tensorboard==2.3.0
+
 memory-profiler==0.58.0
 matplotlib==3.3.3
 END

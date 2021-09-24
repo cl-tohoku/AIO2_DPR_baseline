@@ -26,19 +26,19 @@ set -ex
 source scripts/configs/config.pth
 
 DIR_PROJECT=$DIR_DPR/$NAME
-DIR_MODEL=$DIR_PROJECT/outputs/reader/models
-DIR_TENSORBOARD=$DIR_PROJECT/outputs/reader/tensorboard
-DIR_RESULT=$DIR_PROJECT/outputs/reader/reults
-DIR_LOG=$DIR_PROJECT/outputs/reader/logs
-mkdir -p $DIR_PROJECT/outputs/reader $DIR_MODE $DIR_TENSORBOARD $DIR_LOG $DIR_RESULT
-cp $CONFIG $DIR_PROJECT/outputs/reader/hps.json
-cp $0 $DIR_PROJECT/outputs/reader/run.sh
+mkdir -p $DIR_PROJECT/reader
+cp $CONFIG $DIR_PROJECT/reader/hps.json
+cp $0 $DIR_PROJECT/reader/run.sh
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 python train_reader.py \
+LOG_FILE=$DIR_PROJECT/logs/reader/train_${DATE}.log
+mkdir -p `dirname $LOG_FILE`
+echo "# bash $0 $@" > $LOG_FILE
+
+python train_reader.py \
   --train_file $TRAIN_FILE \
   --dev_file $DEV_FILE \
-  --output_dir $DIR_MODEL \
-  --tensorboard_dir $DIR_TENSORBOARD \
-  --prediction_results_dir $DIR_RESULT \
-  --config $DIR_PROJECT/outputs/reader/hps.json \
-| tee $DIR_LOG/train_${DATE}.log
+  --output_dir $DIR_PROJECT/reader \
+  --tensorboard_dir $DIR_PROJECT/reader/tensorboard \
+  --prediction_results_dir $DIR_PROJECT/reader/results \
+  --config $DIR_PROJECT/reader/hps.json \
+| tee -a $LOG_FILE
