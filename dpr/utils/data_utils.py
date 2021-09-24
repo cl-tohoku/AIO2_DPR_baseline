@@ -94,12 +94,13 @@ def read_ctxs(ctxs_file, return_dict=False):
     logger.info('Reading file %s' % ctxs_file)
     with gzip.open(ctxs_file, 'rt') if ctxs_file.endswith('.gz') else open(ctxs_file) as fi:
         if ctxs_file.endswith(('.csv', '.tsv', '.csv.gz', '.tsv.gz')):
-            sep = '\t' if ctxs_file.endswith('.tsv') else ','
+            sep = '\t' if ctxs_file.endswith(('.tsv', '.tsv.gz')) else ','
             for i, line in enumerate(fi):
                 line = line.strip().split(sep)
                 if i == 0:
                     keys = line
                 assert len(line) == len(keys)
+                line[keys.index('text')] = line[keys.index('text')].strip('"')
                 if return_dict:
                     rows[line[keys.index('id')]] = {k:v for k,v in zip(keys, line) if k != 'id'}
                 else:
