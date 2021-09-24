@@ -1,35 +1,40 @@
 #!/usr/bin/bash
-USAGE="bash $0 [DEST]"
+set -e
+USAGE="USAGE: bash $0 [jaqket/rcqa] [DEST]"
+. configs/config.sh
 
-set -ex
 
-if [ -z $1 ] ; then
-    echo "Please specify the destination dir."
+if [ $1 = "jaqket" ] ; then
+
+    [ ! -z $2 ] && DEST=$2 || DEST=$DIR_DATA/source/jaqket
+    mkdir -p $DEST
+
+    wget -nc https://jaqket.s3-ap-northeast-1.amazonaws.com/data/train_questions.json -P $DEST
+    wget -nc https://jaqket.s3-ap-northeast-1.amazonaws.com/data/dev1_questions.json -P $DEST
+    wget -nc https://jaqket.s3-ap-northeast-1.amazonaws.com/data/dev2_questions.json -P $DEST
+    wget -nc https://jaqket.s3-ap-northeast-1.amazonaws.com/data/candidate_entities.json.gz -P $DEST
+    wget -nc https://www.nlp.ecei.tohoku.ac.jp/projects/AIP-LB/static/aio_leaderboard.json -P $DEST
+
+    mv $DEST/aio_leaderboard.json $DEST/test_questions.json
+    echo "https://www.nlp.ecei.tohoku.ac.jp/projects/jaqket/" > $DEST/README.md
+
+    echo -e "${GREEN}`ls $DEST`${END}"
+
+
+elif [ $1 = "rcqa" ] ; then
+
+    [ ! -z $2 ] && DEST=$2 || DEST=$DIR_DATA/source/rcqa
+    mkdir -p $DEST
+
+    wget -nc http://www.cl.ecei.tohoku.ac.jp/rcqa/data/all-v1.0.json.gz -P $DEST
+    
+    echo "http://www.cl.ecei.tohoku.ac.jp/rcqa/" > $DEST/README.md
+    echo -e "${GREEN}`ls $DEST`${END}"
+
+else
     echo $USAGE
     exit 1
+
 fi
 
 
-DEST=$1
-mkdir -p $DEST/wiki $DEST/aio
-
-wget -nc https://jaqket.s3-ap-northeast-1.amazonaws.com/data/train_questions.json -P $DEST/aio
-wget -nc https://jaqket.s3-ap-northeast-1.amazonaws.com/data/dev1_questions.json -P $DEST/aio
-wget -nc https://jaqket.s3-ap-northeast-1.amazonaws.com/data/dev2_questions.json -P $DEST/aio
-wget -nc https://jaqket.s3-ap-northeast-1.amazonaws.com/data/candidate_entities.json.gz -P $DEST/wiki
-
-
-cat << END > scripts/configs/config.pth
-# dest (To create models, embeddings, etc under `$DIR_DPR/$NAME`)
-DIR_DPR=outputs
-
-# path
-WIKI_FILE=$DEST/wiki/jawiki-20210503-paragraphs.tsv.gz
-TRAIN_FILE=$DEST/aio/abc_eqiden_01-12.json.gz
-DEV_FILE=$DEST/aio/aio_2020_dev.json.gz
-TEST_FILE=$DEST/aio/aio_2020_test.json.gz
-END
-
-ls -R $DEST
-
-echo "DONE"
