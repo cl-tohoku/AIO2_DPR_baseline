@@ -22,6 +22,7 @@ import time
 from typing import List, Tuple, Dict, Iterator
 
 import numpy as np
+import pandas as pd
 
 import torch
 from torch import Tensor as T
@@ -30,29 +31,28 @@ from torch import nn
 from dpr.data.qa_validation import calculate_matches
 from dpr.models import init_biencoder_components
 from dpr.options import (
-        add_encoder_params, 
-        setup_args_gpu, 
-        print_args, 
-        set_encoder_params_from_state,
-        add_tokenizer_params, 
-        add_cuda_params
-        )
+    add_encoder_params,
+    setup_args_gpu,
+    print_args,
+    set_encoder_params_from_state,
+    add_tokenizer_params,
+    add_cuda_params
+)
 from dpr.utils.data_utils import (
     Tensorizer,
     read_qas,
     read_ctxs
 )
 from dpr.utils.model_utils import (
-        setup_for_distributed_mode, 
-        get_model_obj, 
-        load_states_from_checkpoint
-        )
+    setup_for_distributed_mode,
+    get_model_obj,
+    load_states_from_checkpoint
+)
 from dpr.indexer.faiss_indexers import (
-        DenseIndexer, 
-        DenseHNSWFlatIndexer, 
-        DenseFlatIndexer
-        )
-
+    DenseIndexer,
+    DenseHNSWFlatIndexer,
+    DenseFlatIndexer
+)
 
 logging.basicConfig(
     format='%(asctime)s #%(lineno)s %(levelname)s %(name)s :::  %(message)s',
@@ -67,6 +67,7 @@ class DenseRetriever(object):
     """
     Does passage retrieving over the provided index and question encoder
     """
+
     def __init__(self, question_encoder: nn.Module, batch_size: int, tensorizer: Tensorizer, index: DenseIndexer):
         self.question_encoder = question_encoder
         self.batch_size = batch_size
@@ -144,13 +145,19 @@ def parse_qa_csv_file(location) -> Iterator[Tuple[str, List[str]]]:
 
 def validate(passages: Dict[object, Tuple[str, str]], answers: List[List[str]],
              result_ctx_ids: List[Tuple[List[object], List[float]]],
-             workers_num: int, match_type: str, tokenizer) -> List[List[bool]]:
+             workers_num: int, match_type: str, tokenizer, fo_acc: str = None) -> List[List[bool]]:
     match_stats = calculate_matches(passages, answers, result_ctx_ids, workers_num, match_type, tokenizer)
     top_k_hits = match_stats.top_k_hits
+    top_k_acc = [round(v / len(result_ctx_ids), 4) for v in top_k_hits]
 
     logger.info('Validation results: top k documents hits %s', top_k_hits)
-    top_k_hits = [v / len(result_ctx_ids) for v in top_k_hits]
-    logger.info('Validation results: top k documents hits accuracy %s', top_k_hits)
+    logger.info('Validation results: top k documents hits accuracy %s', top_k_acc)
+
+    pd.DataFrame({'top_k': range(1, len(top_k_hits) + 1), 'n_hits': top_k_hits, 'acc': top_k_acc}) \
+        .astype({'top_k': int, 'n_hits': int}) \
+        .set_index('top_k') \
+        .to_csv(open(fo_acc, 'w') if fo_acc is not None else sys.stdout, sep='\t', header=True, index=True)
+
     return match_stats.questions_doc_hits
 
 
@@ -267,7 +274,6 @@ def main():
 
     retriever = DenseRetriever(encoder, args.batch_size, tensorizer, index)
 
-
     # index all passages
     ctx_files_pattern = args.encoded_ctx_file
     input_paths = glob.glob(ctx_files_pattern)
@@ -280,7 +286,7 @@ def main():
         retriever.index_encoded_data(input_paths, buffer_size=index_buffer_sz)
         if args.save_or_load_index:
             retriever.index.serialize(index_path)
-    
+
     # get questions & answers
     questions, question_answers = read_qas(args.qa_file)
     questions_tensor = retriever.generate_question_vectors(questions)
@@ -293,12 +299,12 @@ def main():
     if len(all_passages) == 0:
         raise RuntimeError('No passages data found. Please specify ctx_file param properly.')
 
+    fo_acc = args.out_file.replace('.json', '.tsv')
     questions_doc_hits = validate(all_passages, question_answers, top_ids_and_scores, args.validation_workers,
-                                  args.match, tokenizer)
+                                  args.match, tokenizer, fo_acc=fo_acc)
 
     if args.out_file:
         save_results(all_passages, questions, question_answers, top_ids_and_scores, questions_doc_hits, args.out_file)
-
 
 
 if __name__ == '__main__':

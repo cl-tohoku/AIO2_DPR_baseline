@@ -1,7 +1,7 @@
 mecab-python3==0.996.5
 tqdm
 rank_bm25==0.2.1
-torch==1.6.0
+torch==1.8.0
 transformers==2.11.0
 spacy==2.3.2
 faiss-cpu==1.6.3

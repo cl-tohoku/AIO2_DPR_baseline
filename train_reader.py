@@ -316,6 +316,7 @@ class ReaderTrainer(object):
         epoch_loss = (epoch_loss / epoch_batches) if epoch_batches > 0 else 0 # epochごとのlossを計算
         logger.info('Av Loss per epoch=%f', epoch_loss)
 
+        # dev file の評価
         logger.info('Validation Dev: Epoch: %d', epoch)
         dev_score = self.validate_and_save(epoch, data_iteration, scheduler, is_train=False)
 
