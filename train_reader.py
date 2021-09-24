@@ -519,7 +519,6 @@ class ReaderTrainer(object):
 def main():
     parser = argparse.ArgumentParser()
 
-    add_cuda_params(parser)
     add_encoder_params(parser)
     add_training_params(parser)
     add_tokenizer_params(parser)

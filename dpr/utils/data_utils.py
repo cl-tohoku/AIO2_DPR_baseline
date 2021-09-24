@@ -52,7 +52,7 @@ def read_data_from_json_files(paths: List[str], upsample_rates: List = None) -> 
         upsample_rates = [1] * len(paths)
     assert len(upsample_rates) == len(paths), 'up-sample rates parameter doesn\'t match input files amount'
     for i, path in enumerate(paths):
-        with open(path, 'r', encoding="utf-8") as f:
+        with gzip.open(path, 'rt') if path.endswith('.json.gz') else open(path, 'r', encoding="utf-8") as f:
             logger.info('Reading file %s' % path)
             data = json.load(f)
             upsample_factor = int(upsample_rates[i]) # 1
