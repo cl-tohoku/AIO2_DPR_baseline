@@ -245,17 +245,19 @@ $ bash scripts/raeder/train_reader.sh \
 $ exp_name="baseline"
 $ config_file="scripts/configs/reader_base.json"
 $ test_file="path/to/retrieved/test/file"
+$ model_file="path/to/checkpoint/file"
 
 $ bash scripts/raeder/eval_reader.sh \
     -n $exp_name \
     -c $config_file \
-    -e $test_file
+    -e $test_file \
+    -m $model_file
 ```
 
 __Accuracy__
 - 上位 100 件の文書を用いた時の正解率
 
-|データ|Acc@1|
+|データ|Acc|
 |:---|---:|
 |訓練セット|0.4282|
 |評価セット|0.4625|

@@ -28,17 +28,17 @@ source scripts/configs/config.pth
 DIR_PROJECT=$DIR_DPR/$NAME
 DIR_MODEL=$DIR_PROJECT/outputs/reader/models
 DIR_TENSORBOARD=$DIR_PROJECT/outputs/reader/tensorboard
+DIR_RESULT=$DIR_PROJECT/outputs/reader/reults
 DIR_LOG=$DIR_PROJECT/outputs/reader/logs
-mkdir -p $DIR_PROJECT/outputs/reader $DIR_MODE $DIR_TENSORBOARD $DIR_LOG
+mkdir -p $DIR_PROJECT/outputs/reader $DIR_MODE $DIR_TENSORBOARD $DIR_LOG $DIR_RESULT
 cp $CONFIG $DIR_PROJECT/outputs/reader/hps.json
 cp $0 $DIR_PROJECT/outputs/reader/run.sh
 
 CUDA_VISIBLE_DEVICES=0,1,2,3 python train_reader.py \
   --train_file $TRAIN_FILE \
   --dev_file $DEV_FILE \
-  --num_save_epoch 2 \
   --output_dir $DIR_MODEL \
   --tensorboard_dir $DIR_TENSORBOARD \
-  --prediction_results_dir $DIR_LOG \
+  --prediction_results_dir $DIR_RESULT \
   --config $DIR_PROJECT/outputs/reader/hps.json \
 | tee $DIR_LOG/train_${DATE}.log
