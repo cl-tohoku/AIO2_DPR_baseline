@@ -35,7 +35,7 @@ config_file=$ROOT/scripts/configs/retriever_base.json
 bash $ROOT/scripts/retriever/train_retriever.sh \
   -n $exp_name \
   -c $config_file \
-  -g 0,1,2,3
+  -g 0,1,2,3,4,5,6,7
 
 DATE=`date +%Y%m%d-%H%M`
 echo $DATE
