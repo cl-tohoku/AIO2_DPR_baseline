@@ -1,5 +1,5 @@
-#!/usr/bin/bash
-# qsub -cwd -g gcb50246 -l rt_F=1 -l h_rt=12:00:00 -N log_dpr -j y $HOME/exp2021/DPR_baseline/scripts/abci/train_retriever.sh
+#!/bin/bash
+# qsub -cwd -g gcb50246 -l rt_G.large=1 -l h_rt=12:00:00 -N log_enc -j y $HOME/exp2021/DPR_baseline/scripts/abci/encode_ctxs.sh
 
 PATH=$HOME/.linuxbrew/bin:$HOME/.linuxbrew/sbin:$PATH
 
@@ -30,13 +30,10 @@ pip list
 ROOT=$HOME/exp2021/DPR_baseline
 
 exp_name=baseline
-config_file=$ROOT/scripts/configs/retriever_base.json
+model=/groups/1/gcb50246/migrated_from_SFA_GPFS/miyawaki/DPR_baseline/baseline/retriever/dpr_biencoder.59.230.pt
 
-bash $ROOT/scripts/retriever/train_retriever.sh \
+
+bash $ROOT/scripts/retriever/encode_ctxs.sh \
   -n $exp_name \
-  -c $config_file \
-  -g 0,1,2,3
-
-DATE=`date +%Y%m%d-%H%M`
-echo $DATE
+  -m $model
 

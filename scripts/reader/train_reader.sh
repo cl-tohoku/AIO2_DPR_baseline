@@ -30,7 +30,7 @@ mkdir -p $DIR_PROJECT/reader
 cp $CONFIG $DIR_PROJECT/reader/hps.json
 cp $0 $DIR_PROJECT/reader/run.sh
 
-LOF_FILE=$DIR_PROJECT/logs/reader/train_${DATE}.log
+LOG_FILE=$DIR_PROJECT/logs/reader/train_${DATE}.log
 mkdir -p `dirname $LOG_FILE`
 echo "# bash $0 $@" > $LOG_FILE
 
