@@ -202,8 +202,17 @@ $ bash scripts/retriever/retrieve_passage.sh \
 
 $ ls $DIR_DPR/$exp_name/retrieved
     train_*.*.json   dev_*.*.json   test_*.*.json   # 予測結果（reader 学習データ）
-    train_*.*.tsv    dev_*.*.tsv    test_*.*.tsv    # 予測スコア
+    train_*.*.tsv    dev_*.*.tsv    test_*.*.tsv    # 予測スコア（Acc@k を含む）
 ```
+
+__Acc@k__
+- 抽出した上位 k 件までの文書に解答が含まれている質問数の割合
+
+|データ|Acc@1|Acc@5|Acc@10|Acc@50|Acc@100|
+|:---|---:|---:|---:|---:|---:|
+|訓練セット|0.4016|0.6538|0.7324|0.8458|0.8720|
+|評価セット|0.3549|0.5919|0.6802|0.8363|0.8881|
+
 
 ### Reader
 
