@@ -179,13 +179,14 @@ class ReaderTrainer(object):
         reader_validation_score = self.validate(is_train, epoch)
 
         if save_cp:
-            cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=False)  # 毎epochごとにモデルを保存
-            logger.info('Saved checkpoint to %s', cp_name)
+            if (epoch + 1) % args.num_save_epoch == 0:  # 指定epoch数毎に保存
+                cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=False)
+                logger.info('Saved checkpoint to %s', cp_name)
 
             if reader_validation_score > (self.best_validation_result or 0):
                 self.best_validation_result = reader_validation_score
                 self.best_cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=True)
-                logger.info('New Best validation checkpoint %s', cp_name)
+                logger.info('New Best validation checkpoint %s', self.best_cp_name)
 
         return reader_validation_score
 
@@ -325,12 +326,15 @@ class ReaderTrainer(object):
         args = self.args
         model_to_save = get_model_obj(self.reader)
         if is_best:  # save best model
+            # cp = os.path.join(args.output_dir,
+            #           args.checkpoint_file_name + '.' + 'best' + ('.' + str(offset) if offset > 0 else ''))
             cp = os.path.join(args.output_dir,
-                        args.checkpoint_file_name + '.' + 'best' + ('.' + str(offset) if offset > 0 else ''))
+                              args.checkpoint_file_name + '_' + 'best.pt')
         else:
-            if (epoch + 1) % args.num_save_epoch == 0:  # 指定epoch数毎に保存
-                cp = os.path.join(args.output_dir,
-                        args.checkpoint_file_name + '.' + str(epoch) + ('.' + str(offset) if offset > 0 else ''))
+            # cp = os.path.join(args.output_dir,
+            #            args.checkpoint_file_name + '.' + str(epoch) + ('.' + str(offset) if offset > 0 else ''))
+            cp = os.path.join(args.output_dir,
+                              args.checkpoint_file_name + '_epoch_' + str(epoch) + '.pt')
 
         meta_params = get_encoder_params_state(args)
 
@@ -338,6 +342,7 @@ class ReaderTrainer(object):
                                 epoch, meta_params
                                 )
         torch.save(state._asdict(), cp)
+
         return cp
 
     def _load_saved_state(self, saved_state: CheckpointState):
@@ -567,7 +572,6 @@ def main():
         trainer.validate(is_train=False, epoch=0)
     else:
         logger.warning("Neither train_file or (model_file & dev_file) parameters are specified. Nothing to do.")
-
 
 
 if __name__ == "__main__":
