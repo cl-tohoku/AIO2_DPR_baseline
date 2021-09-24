@@ -3,6 +3,7 @@
 **/work/
 **/tmp/
 **/lib/
+scripts/abci
 
 **/*debug.json
 **/log*
