@@ -244,7 +244,7 @@ class ReaderTrainer(object):
                 output_file = os.path.join(args.prediction_results_dir, 'train_prediction_results_epoch_' + str(epoch) + '.json')
             else:
                 output_file = os.path.join(args.prediction_results_dir,
-                                           'dev1_prediction_results_epoch_' + str(epoch) + '.json')
+                                           'prediction_results_epoch_' + str(epoch) + '.json')
             self._save_predictions(output_file, all_results)
 
         return em

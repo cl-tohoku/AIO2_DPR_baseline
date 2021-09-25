@@ -237,6 +237,11 @@ $ bash scripts/raeder/train_reader.sh \
 # 実行結果
 
 $ ls $DIR_DPR/$exp_name/reader
+    tensorboard/                    # tensorboard ログディレクトリ (if `--tensorboard_logdir`)
+    dpr_biencoder.*.*.pt            # モデルファイル
+    hps.json                        # パラメータ
+    run.sh                          # 実行時シェルスクリプト 
+    results/                        # dev セットの評価結果の出力ディレクトリ
 ```
 
 #### 5. 評価
@@ -258,6 +263,7 @@ $ bash scripts/raeder/eval_reader.sh \
     -m $model_file
 
 $ ls $DIR_DPR/$exp_name/readed
+    results/                        # test セットの評価結果の出力ディレクトリ
 ```
 
 __Accuracy__
