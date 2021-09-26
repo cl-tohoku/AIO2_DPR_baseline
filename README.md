@@ -238,7 +238,7 @@ $ bash scripts/raeder/train_reader.sh \
 
 $ ls $DIR_DPR/$exp_name/reader
     tensorboard/                    # tensorboard ログディレクトリ (if `--tensorboard_logdir`)
-    dpr_biencoder.*.*.pt            # モデルファイル
+    dpr_reader.*.*.pt               # モデルファイル
     hps.json                        # パラメータ
     run.sh                          # 実行時シェルスクリプト 
     results/                        # dev セットの評価結果の出力ディレクトリ

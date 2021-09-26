@@ -26,7 +26,7 @@ set -ex
 source scripts/configs/config.pth
 
 DIR_PROJECT=$DIR_DPR/$NAME
-mkdir -p $DIR_PROJECT/reader
+mkdir -p $DIR_PROJECT/reader -p $DIR_PROJECT/reader/tensorboard -p $DIR_PROJECT/reader/results
 cp $CONFIG $DIR_PROJECT/reader/hps.json
 cp $0 $DIR_PROJECT/reader/run.sh
 
