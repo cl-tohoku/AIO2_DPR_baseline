@@ -263,7 +263,7 @@ $ bash scripts/raeder/eval_reader.sh \
     -m $model_file
 
 $ ls $DIR_DPR/$exp_name/raeder/results/
-    results/                        # test セットの評価結果の出力ディレクトリ
+    test_prediction_resuls.json         # test セットの評価結果の出力ディレクトリ
 ```
 
 __Accuracy__
