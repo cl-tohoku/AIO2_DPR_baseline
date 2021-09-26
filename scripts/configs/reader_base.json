@@ -36,6 +36,7 @@
     "gold_passages_src": null,
     "gold_passages_src_dev": null,
     "num_workers": 16,
+    "num_save_epoch": 1,
 
     "no_cuda": false,
     "local_rank": -1,
