@@ -44,11 +44,18 @@ $ bash scripts/download_data.sh <output_dir>
 
 <output_dir>
 |- wiki/
-|  |- jawiki-20210503-paragraphs.tsv
+|  |- jawiki-20210503-paragraphs.tsv.gz
 |- aio/
-|  |- abc_eqiden_01-12.json
-|  |- dev_jaqket.json
-|  |- test_jaqket.json
+|  |- abc_01-12.json.gz      # 訓練セット
+|  |- aio_01_dev.json.gz     # 開発セット
+|  |- aio_01_test.json.gz    # 評価セット
+|  |- aio_01_unused.json.gz
+
+# 「質問」と「答え」からなる TSV 形式のファイル（デバッグ用）
+|  |- abc_01-12.tsv      # 訓練セット
+|  |- aio_01_dev.tsv     # 開発セット
+|  |- aio_01_test.tsv    # 評価セット
+|  |- aio_01_unused.tsv
 ```
 
 |データ|質問数|文書数|
