@@ -1,8 +1,8 @@
-# dest (To create models, embeddings, etc under `$DIR_DPR/$NAME`)
-DIR_DPR=/work02/miyawaki/DPR_baseline
+# data
+WIKI_FILE=
+TRAIN_FILE=
+DEV_FILE=
+TEST_FILE=
 
-# path
-WIKI_FILE=/work02/miyawaki/exp2021/DPR_for_AIO/datasets/dpr4aio/head_jawiki-20210503-paragraphs.tsv
-TRAIN_FILE=/work02/miyawaki/exp2021/DPR_for_AIO/datasets/dpr4aio/abc_eqiden_01-12.json
-DEV_FILE=/work02/ntt_dpr/datasets/retriever/dev1_questions.sp200.bs16.json
-TEST_FILE=/work02/ntt_dpr/datasets/retriever/dev1_questions.sp200.bs16.json
+# dest (To create models, embeddings, etc under )
+DIR_DPR=
