@@ -172,11 +172,11 @@ class ReaderTrainer(object):
 
         return
 
-    def validate_and_save(self, epoch: int, iteration: int, scheduler, is_train: bool):
+    def validate_and_save(self, epoch: int, iteration: int, scheduler, is_train: bool, is_test: bool):
         args = self.args
         # in distributed DDP mode, save checkpoint for only one process
         save_cp = args.local_rank in [-1, 0]
-        reader_validation_score = self.validate(is_train, epoch)
+        reader_validation_score = self.validate(is_train=is_train, is_test=is_test, epoch=epoch)
 
         if save_cp:
             if (epoch + 1) % args.num_save_epoch == 0:  # 指定epoch数毎に保存
@@ -190,7 +190,7 @@ class ReaderTrainer(object):
 
         return reader_validation_score
 
-    def validate(self, is_train: bool, epoch: int):
+    def validate(self, is_train: bool, is_test: bool, epoch: int):
         logger.info('Validation ...')
         args = self.args
         self.reader.eval()
@@ -239,12 +239,17 @@ class ReaderTrainer(object):
             logger.info("n=%d\tEM %.2f" % (n, em * 100))
 
 
-        if args.prediction_results_dir:  # devの結果のみファイル出力
+        if args.prediction_results_dir:
             if is_train:
                 output_file = os.path.join(args.prediction_results_dir, 'train_prediction_results_epoch_' + str(epoch) + '.json')
             else:
-                output_file = os.path.join(args.prediction_results_dir,
-                                           'prediction_results_epoch_' + str(epoch) + '.json')
+                if is_test:  # test ファイルの結果を出力
+                    output_file = os.path.join(args.prediction_results_dir,
+                                           'dev_prediction_results_epoch_' + str(epoch) + '.json')
+                else:  # dev ファイルの結果を出力
+                    output_file = os.path.join(args.prediction_results_dir,
+                                               'test_prediction_results.json')
+
             self._save_predictions(output_file, all_results)
 
         return em
@@ -318,7 +323,7 @@ class ReaderTrainer(object):
 
         # dev file の評価
         logger.info('Validation Dev: Epoch: %d', epoch)
-        dev_score = self.validate_and_save(epoch, data_iteration, scheduler, is_train=False)
+        dev_score = self.validate_and_save(epoch, data_iteration, scheduler, is_train=False, is_test=False)
 
         return global_step, {'train_loss': epoch_loss, 'dev_score': dev_score}
 
@@ -569,7 +574,7 @@ def main():
         trainer.run_train()
     elif args.dev_file:
         logger.info("No train files are specified. Run validation.")
-        trainer.validate(is_train=False, epoch=0)
+        trainer.validate(is_train=False, is_test=True, epoch=0)
     else:
         logger.warning("Neither train_file or (model_file & dev_file) parameters are specified. Nothing to do.")
 
