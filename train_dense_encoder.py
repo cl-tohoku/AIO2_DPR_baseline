@@ -127,7 +127,7 @@ class BiEncoderTrainer(object):
             batch_size=batch_size,
             shuffle=shuffle,
             shuffle_seed=shuffle_seed,
-            offset=offset
+            offset=offset,
             strict_batch_size=True,  # this is not really necessary, one can probably disable it
         )
 
@@ -160,7 +160,7 @@ class BiEncoderTrainer(object):
         fo_score = os.path.join(args.output_dir, f'score_train_retriever_{self.model_id}.jsonl')
         with open(fo_score, 'w') as fo_jsl:
             for epoch in range(self.start_epoch, int(args.num_train_epochs)):
-                logger.info("***** Epoch %d/%d *****", epoch, args.num_train_epochs)
+                logger.info("***** Epoch %d *****", epoch)
                 do_save = ((epoch+1) % args.eval_per_epoch == 0)    # 0 start
                 epoch_score = self._train_epoch(scheduler, epoch, train_iterator, dev_iterator, do_save=do_save)
                 epoch_scores.append(epoch_score)
@@ -178,17 +178,12 @@ class BiEncoderTrainer(object):
         dest = os.path.join(args.tensorboard_dir, self.model_id)
         os.makedirs(dest, exist_ok=True)
         with SummaryWriter(log_dir=dest, filename_suffix='retriever_train') as writer:
-            # min_loss, max_acc, best_epoch = np.inf, -np.inf, 0
             for epoch, epoch_score in enumerate(epoch_scores):
                 writer.add_scalar(f'Loss/train', epoch_score['train_loss'], epoch)
                 writer.add_scalar(f'Loss/valid', epoch_score['valid_loss'], epoch)
-                writer.add_scalar(f'Acc/train', epoch_score['train_acc'], epoch)
-                writer.add_scalar(f'Acc/valid', epoch_score['valid_acc'], epoch)
+                writer.add_scalar(f'Acc/train', epoch_score['train_accuracy'], epoch)
+                writer.add_scalar(f'Acc/valid', epoch_score['valid_accuracy'], epoch)
                 writer.add_scalar(f'Av.Rank/valid', epoch_score['valid_ave_rank'], epoch)
-                # if epoch_score['valid_loss'] < min_loss:
-                #     min_loss = epoch_score['valid_loss']
-                #     max_acc = epoch_score['valid_acc']
-                #     best_epoch = epoch
         logger.info(f'Write tensorboard log file @ {dest}')
 
     def validate_and_save(self, epoch:int, iteration:int, scheduler, eval_iterator=None, do_save=True):
