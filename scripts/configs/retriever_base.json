@@ -1,0 +1,44 @@
+{
+    "seed": 2021,
+
+    "num_train_epochs": 60,
+    "eval_per_epoch": 5,
+    "log_batch_step": 100,
+    "train_rolling_loss_step": 100,
+
+    "hard_negatives": 1,
+    "other_negatives": 0,
+    "train_files_upsamples_rates": null,
+
+    "val_av_rank_start_epoch": 30,
+    "val_av_rank_hard_neg": 30,
+    "val_av_rank_other_neg": 30,
+    "val_av_rank_bsz": 128,
+    "val_av_rank_max_qs": 10000,
+    "checkpoint_file_name": "dpr_biencoder",
+
+    "batch_size": 64,
+    "dev_batch_size": 64,
+    "gradient_accumulation_steps": 2,
+
+    "learning_rate": 1e-5,
+    "adam_eps": 1e-8,
+    "adam_betas": "(0.9, 0.999)",
+    "weight_decay": 0.0,
+    "warmup_steps": 1237,
+    "dropout": 0.3,
+    "max_grad_norm": 2.0,
+
+    "pretrained_model_cfg": "cl-tohoku/bert-base-japanese-whole-word-masking",
+    "encoder_model_type": "hf_bert",
+    "pretrained_file": null,
+    "projection_dim": 768,
+    "sequence_length": 256,
+    "fix_ctx_encoder": false,
+    "shuffle_positive_ctx": false,
+
+    "no_cuda": false,
+    "local_rank": -1,
+    "fp16": true,
+    "fp16_opt_level": "O1"
+}

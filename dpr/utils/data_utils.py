@@ -9,6 +9,7 @@
 Utilities for general purpose data processing
 """
 
+import gzip
 import sys
 import json
 import logging
@@ -51,13 +52,77 @@ def read_data_from_json_files(paths: List[str], upsample_rates: List = None) -> 
         upsample_rates = [1] * len(paths)
     assert len(upsample_rates) == len(paths), 'up-sample rates parameter doesn\'t match input files amount'
     for i, path in enumerate(paths):
-        with open(path, 'r', encoding="utf-8") as f:
+        with gzip.open(path, 'rt') if path.endswith('.json.gz') else open(path, 'r', encoding="utf-8") as f:
+            logger.info('Reading file %s' % path)
             data = json.load(f)
             upsample_factor = int(upsample_rates[i]) # 1
             data = data * upsample_factor
             results.extend(data)
             logger.info(f'| READ ... L-{len(results)} {path}')
     return results
+
+
+def read_qas(qa_file):
+    questions, question_answers = [], []
+    assert qa_file.endswith((
+        '.csv', '.tsv', '.json', '.jsonl',
+        '.csv.gz', '.tsv.gz', '.json.gz', '.jsonl.gz'
+    ))
+    logger.info('Reading file %s' % qa_file)
+    with gzip.open(qa_file, 'rt') if qa_file.endswith('.gz') else open(qa_file) as fi:
+        if qa_file.endswith(('.csv', '.tsv', '.csv.gz', '.tsv.gz')):
+            raise NotImplementedError('')
+        elif qa_file.endswith(('.jsonl', '.jsonl.gz')):
+            for line in fi:
+                line = json.loads(line.strip())
+                questions.append(line['question'])
+                question_answers.append(line['answers'])
+        elif qa_file.endswith(('.json', '.json.gz')):
+            for d in json.load(fi):
+                questions.append(d['question'])
+                question_answers.append(d['answers'])
+        else:
+            logger.warning('Cannot read qa_file')
+    return questions, question_answers
+
+def read_ctxs(ctxs_file, return_dict=False):
+    rows = dict() if return_dict else []
+    assert ctxs_file.endswith((
+        '.csv', '.tsv', '.json', '.jsonl',
+        '.csv.gz', '.tsv.gz', '.json.gz', '.jsonl.gz'
+    ))
+    logger.info('Reading file %s' % ctxs_file)
+    with gzip.open(ctxs_file, 'rt') if ctxs_file.endswith('.gz') else open(ctxs_file) as fi:
+        if ctxs_file.endswith(('.csv', '.tsv', '.csv.gz', '.tsv.gz')):
+            sep = '\t' if ctxs_file.endswith(('.tsv', '.tsv.gz')) else ','
+            for i, line in enumerate(fi):
+                line = line.strip().split(sep)
+                if i == 0:
+                    keys = line
+                assert len(line) == len(keys)
+                line[keys.index('text')] = line[keys.index('text')].strip('"')
+                if return_dict:
+                    rows[line[keys.index('id')]] = {k:v for k,v in zip(keys, line) if k != 'id'}
+                else:
+                    rows.append({k:v for k,v in zip(keys, line)})
+        elif ctxs_file.endswith(('.jsonl', '.jsonl.gz')):
+            for line in fi:
+                line = json.loads(line.strip())
+                if return_dict:
+                    id = line.pop('id')
+                    rows[id] = line
+                else:
+                    rows.append(line)
+        elif ctxs_file.endswith(('.json', '.json.gz')):
+            if return_dict:
+                for d in json.load(fi):
+                    id = d.pop('id')
+                    rows[id] = d
+            else:
+                rows = json.load(fi)
+        else:
+            logger.warning('Cannot read ctxs_file')
+    return rows
 
 
 class ShardedDataIterator(object):
@@ -168,6 +233,29 @@ class ShardedDataIterator(object):
     def apply(self, visitor_func: Callable):
         for sample in self.data[self.shard_start_idx:self.shard_end_idx]:
             visitor_func(sample)
+
+    def reset_negatives(self, items):
+        """ items[0]: len(items) == batch_size
+        {
+            'question': str,
+            'answers': List[str],
+            'positive_ctxs': [{'title':str, 'text':str}],
+            'negative_ctxs': [{'title':str, 'text':str}],
+            'hard_negative_ctxs': [{'title':str, 'text':str}],
+        }
+        """
+        output = items.copy()
+        for i, src in enumerate(items):
+            negatives, negative_answers = [], []
+            for tgt in items:
+                if src != tgt:
+                    negative_answers.extend([t['title'] for t in tgt['positive_ctxs']])
+                    negatives.extend(tgt['positive_ctxs'])
+            if not all(neg['title'] in negative_answers for neg in negatives):
+                raise ValueError('No answer contain negative_ctxs')
+            output[i]['negative_ctxs'] = negatives
+
+        return output
 
 
 def normalize_question(question: str) -> str:

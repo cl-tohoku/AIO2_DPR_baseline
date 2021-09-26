@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 QAMatchStats = collections.namedtuple('QAMatchStats', ['top_k_hits', 'questions_doc_hits'])
 
 
-def calculate_matches(all_docs: Dict[object, Tuple[str, str]], answers: List[List[str]],
+def calculate_matches(all_docs: Dict[object, Dict[str, str]], answers: List[List[str]],
                       closest_docs: List[Tuple[List[object], List[float]]], workers_num: int,
-                      match_type: str) -> QAMatchStats:
+                      match_type: str, tokenizer) -> QAMatchStats:
     """
     Evaluates answers presence in the set of documents. This function is supposed to be used with a large collection of
     documents and results. It internally forks multiple sub-processes for evaluation and then merges results
@@ -46,19 +46,16 @@ def calculate_matches(all_docs: Dict[object, Tuple[str, str]], answers: List[Lis
     dpr_all_documents = all_docs
 
     tok_opts = {}
-    tokenizer = SimpleTokenizer(**tok_opts)
-
-    processes = ProcessPool(
-        processes=workers_num,
-    )
 
     logger.info('Matching answers in top docs...')
 
-    get_score_partial = partial(check_answer, match_type=match_type, tokenizer=tokenizer)
+    # tokenizer = SimpleTokenizer(**tok_opts)
+    # processes = ProcessPool(processes=workers_num)
+    # get_score_partial = partial(check_answer, match_type=match_type, tokenizer=tokenizer)
+    # questions_answers_docs = zip(answers, closest_docs)
+    # scores = processes.map(get_score_partial, questions_answers_docs)
 
-    questions_answers_docs = zip(answers, closest_docs)
-
-    scores = processes.map(get_score_partial, questions_answers_docs)
+    scores = [check_answer(ans, doc, tokenizer, match_type) for ans, doc in zip(answers, closest_docs)]
 
     logger.info('Per question validation results len=%d', len(scores))
 
@@ -72,17 +69,17 @@ def calculate_matches(all_docs: Dict[object, Tuple[str, str]], answers: List[Lis
     return QAMatchStats(top_k_hits, scores)
 
 
-def check_answer(questions_answers_docs, tokenizer, match_type) -> List[bool]:
+def check_answer(answers, docs, tokenizer, match_type) -> List[bool]:
     """Search through all the top docs to see if they have any of the answers."""
-    answers, (doc_ids, doc_scores) = questions_answers_docs
+    # answers, (doc_ids, doc_scores) = questions_answers_docs
+    doc_ids, doc_scores = docs
 
     global dpr_all_documents
     hits = []
 
     for i, doc_id in enumerate(doc_ids):
         doc = dpr_all_documents[doc_id]
-        #text = doc[0]
-        text = doc.text
+        text = doc['text']
 
         answer_found = False
         if text is None:  # cannot find the document for some reason
@@ -105,16 +102,20 @@ def has_answer(answers, text, tokenizer, match_type) -> bool:
 
     if match_type == 'string':
         # Answer is a list of possible strings
-        text = tokenizer.tokenize(text).words(uncased=True)
+        # text = tokenizer.tokenize(text).words(uncased=True)
+        text = ' '.join(tokenizer.tokenize(text))
 
         for single_answer in answers:
             single_answer = _normalize(single_answer)
             single_answer = tokenizer.tokenize(single_answer)
-            single_answer = single_answer.words(uncased=True)
+            # single_answer = single_answer.words(uncased=True)
+            single_answer = ' '.join(single_answer)
 
-            for i in range(0, len(text) - len(single_answer) + 1):
-                if single_answer == text[i: i + len(single_answer)]:
-                    return True
+            # for i in range(0, len(text) - len(single_answer) + 1):
+            #     if single_answer == text[i: i + len(single_answer)]:
+            #         return True
+            if single_answer in text:
+                return True
 
     elif match_type == 'regex':
         # Answer is a regex
@@ -160,4 +161,4 @@ def _normalize_answer(s):
 
 
 def _normalize(text):
-    return unicodedata.normalize('NFKC', text)  # 日本語対応
+    return unicodedata.normalize('NFKC', text)

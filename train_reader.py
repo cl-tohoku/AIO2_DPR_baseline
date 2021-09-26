@@ -16,7 +16,7 @@ import glob
 import json
 import logging
 import os
-import re
+import sys
 from collections import defaultdict
 from typing import List
 
@@ -27,21 +27,32 @@ from dpr.data.qa_validation import exact_match_score
 from dpr.data.reader_data import ReaderSample, get_best_spans, SpanPrediction, convert_retriever_results
 from dpr.models import init_reader_components
 from dpr.models.reader import create_reader_input, ReaderBatch, compute_loss
-from dpr.options import add_encoder_params, setup_args_gpu, set_seed, add_training_params, \
+from dpr.options import add_cuda_params, add_encoder_params, setup_args_gpu, set_seed, add_training_params, \
     add_reader_preprocessing_params, set_encoder_params_from_state, get_encoder_params_state, add_tokenizer_params, \
-    print_args
+    print_args, override_args
 from dpr.utils.data_utils import ShardedDataIterator, read_serialized_data_from_files, Tensorizer
 from dpr.utils.model_utils import get_schedule_linear, load_states_from_checkpoint, move_to_device, CheckpointState, \
     get_model_file, setup_for_distributed_mode, get_model_obj
 from torch.utils.tensorboard import SummaryWriter
 
 
+logging.basicConfig(
+    format='%(asctime)s #%(lineno)s %(levelname)s %(name)s :::  %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO,
+    stream=sys.stdout,
+)
+
+logger = logging.getLogger(__name__)
+
+"""
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 if (logger.hasHandlers()):
     logger.handlers.clear()
 console = logging.StreamHandler()
 logger.addHandler(console)
+"""
 
 ReaderQuestionPredictions = collections.namedtuple('ReaderQuestionPredictions', ['id', 'predictions', 'gold_answers'])
 
@@ -123,15 +134,15 @@ class ReaderTrainer(object):
 
         global_step = self.start_epoch * updates_per_epoch + self.start_batch
 
-        epoch_scores = []  # lossやscoreを格納するリスト
+        epoch_scores = []
         max_score = -np.inf
         stop_count = 0
 
         parameters = {'seed': args.seed, 'bsize': args.batch_size, 'lr': args.learning_rate,
                       'warmup_steps': args.warmup_steps, 'dropout': args.dropout,
                       'gradient': args.gradient_accumulation_steps}
-        suffix = '.s{}_bs{}_n{}_lr{}_warm{}_do{}_gradient_{}'.format(*parameters.values())
-        writer = SummaryWriter(log_dir=args.dir_tensorboard, filename_suffix=suffix)
+        suffix = '.s{}_bs{}_lr{}_warm{}_do{}_gradient_{}'.format(*parameters.values())
+        writer = SummaryWriter(log_dir=args.tensorboard_dir, filename_suffix=suffix)
 
         for epoch in range(self.start_epoch, int(args.num_train_epochs)):
             logger.info("***** Epoch %d *****", epoch)
@@ -146,7 +157,7 @@ class ReaderTrainer(object):
                 if epoch_score['valid_score'] < max_score:  # 最大スコアを下回った場合カウントを1つ進める
                     stop_count += 1
                     if stop_count == args.early_stop_count:
-                        break # 訓練終了
+                        break  # 訓練終了
                 else:
                     max_score = epoch_score['valid_score']
                     stop_count = 0
@@ -154,16 +165,9 @@ class ReaderTrainer(object):
         if args.local_rank in [-1, 0]:
             logger.info('Training finished. Best validation checkpoint %s', self.best_cp_name)
 
-        max_score, best_epoch = -np.inf, 0
-        with open(args.loss_and_score_results_dir  +'/reader_train_score' + suffix + '.tsv', 'w') as fo_train, \
-            open(args.loss_and_score_results_dir + '/reader_dev_score' + suffix + '.tsv', 'w') as fo_dev:
-            fo_train.write('epoch\tloss\n')
+        with open(args.prediction_results_dir + '/reader_dev_score' + suffix + '.tsv', 'w') as fo_dev:
             fo_dev.write('epoch\tscore\n')
             for epoch, epoch_score in enumerate(epoch_scores):
-                if epoch_score['dev_score'] < max_score:
-                    max_score = epoch_score['dev_score']
-                    best_epoch = epoch
-                fo_train.write('{}\t{}\n'.format(epoch, epoch_score['train_loss']))
                 fo_dev.write('{}\t{}\n'.format(epoch, epoch_score['dev_score']))
 
         return
@@ -175,14 +179,14 @@ class ReaderTrainer(object):
         reader_validation_score = self.validate(is_train, epoch)
 
         if save_cp:
-            cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=False) # 毎epochごとにモデルを保存
-            logger.info('Saved checkpoint to %s', cp_name)
+            if (epoch + 1) % args.num_save_epoch == 0:  # 指定epoch数毎に保存
+                cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=False)
+                logger.info('Saved checkpoint to %s', cp_name)
 
-            if reader_validation_score < (self.best_validation_result or 0):
+            if reader_validation_score > (self.best_validation_result or 0):
                 self.best_validation_result = reader_validation_score
-                #self.best_cp_name = cp_name
                 self.best_cp_name = self._save_checkpoint(scheduler, epoch, iteration, is_best=True)
-                logger.info('New Best validation checkpoint %s', cp_name)
+                logger.info('New Best validation checkpoint %s', self.best_cp_name)
 
         return reader_validation_score
 
@@ -240,7 +244,7 @@ class ReaderTrainer(object):
                 output_file = os.path.join(args.prediction_results_dir, 'train_prediction_results_epoch_' + str(epoch) + '.json')
             else:
                 output_file = os.path.join(args.prediction_results_dir,
-                                           'dev1_prediction_results_epoch_' + str(epoch) + '.json')
+                                           'prediction_results_epoch_' + str(epoch) + '.json')
             self._save_predictions(output_file, all_results)
 
         return em
@@ -321,12 +325,16 @@ class ReaderTrainer(object):
     def _save_checkpoint(self, scheduler, epoch: int, offset: int, is_best: bool) -> str:
         args = self.args
         model_to_save = get_model_obj(self.reader)
-        if is_best: # save best model
+        if is_best:  # save best model
+            # cp = os.path.join(args.output_dir,
+            #           args.checkpoint_file_name + '.' + 'best' + ('.' + str(offset) if offset > 0 else ''))
             cp = os.path.join(args.output_dir,
-                              args.checkpoint_file_name + '.' + 'best' + ('.' + str(offset) if offset > 0 else ''))
-        else: # 毎epoch保存
+                              args.checkpoint_file_name + '_' + 'best.pt')
+        else:
+            # cp = os.path.join(args.output_dir,
+            #            args.checkpoint_file_name + '.' + str(epoch) + ('.' + str(offset) if offset > 0 else ''))
             cp = os.path.join(args.output_dir,
-                              args.checkpoint_file_name + '.' + str(epoch) + ('.' + str(offset) if offset > 0 else ''))
+                              args.checkpoint_file_name + '_epoch_' + str(epoch) + '.pt')
 
         meta_params = get_encoder_params_state(args)
 
@@ -334,6 +342,7 @@ class ReaderTrainer(object):
                                 epoch, meta_params
                                 )
         torch.save(state._asdict(), cp)
+
         return cp
 
     def _load_saved_state(self, saved_state: CheckpointState):
@@ -525,8 +534,6 @@ def main():
     parser.add_argument('--eval_top_docs', nargs='+', type=int,
                         help="top retrival passages thresholds to analyze prediction results for")
     parser.add_argument('--checkpoint_file_name', type=str, default='dpr_reader')
-    parser.add_argument('--prediction_results_file', type=str, help='path to a file to write prediction results to')
-    parser.add_argument('--loss_and_score_results_dir', type=str)
     parser.add_argument('--prediction_results_dir', type=str)
 
     # training parameters
@@ -534,18 +541,23 @@ def main():
                         help="batch steps to run validation and save checkpoint")
     parser.add_argument("--output_dir", default=None, type=str,
                         help="The output directory where the model checkpoints will be written to")
-    parser.add_argument('--dir_tensorboard', default=None, type=str,
-                        help='The output directory where the tensorboard log will be written to')
     parser.add_argument('--early_stop_count', default=5, type=int)
     parser.add_argument('--early_stop', action='store_true')
+    parser.add_argument('--num_save_epoch', type=int, default=1)
     parser.add_argument('--fully_resumable', action='store_true',
                         help="Enables resumable mode by specifying global step dependent random seed before shuffling "
                              "in-batch data")
 
-    args = parser.parse_args()
+    # additional parameters
+    misc = parser.add_argument_group('Group of Additional Parameters')
+    misc.add_argument('--tensorboard_dir', type=str, default=None, help='The output directory where the tensorboard log will be written to')
+    misc.add_argument('--config_file', type=str, default=None, help='Parameter file')
 
-    if args.output_dir is not None:
-        os.makedirs(args.output_dir, exist_ok=True)
+    args = parser.parse_args()
+    if args.config_file:
+        args = override_args(args)
+
+    os.makedirs(args.output_dir, exist_ok=True)
 
     setup_args_gpu(args)
     set_seed(args)
