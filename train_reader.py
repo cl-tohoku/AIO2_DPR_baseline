@@ -244,11 +244,9 @@ class ReaderTrainer(object):
                 output_file = os.path.join(args.prediction_results_dir, 'train_prediction_results_epoch_' + str(epoch) + '.json')
             else:
                 if is_test:  # test ファイルの結果を出力
-                    output_file = os.path.join(args.prediction_results_dir,
-                                           'dev_prediction_results_epoch_' + str(epoch) + '.json')
+                    output_file = os.path.join(args.prediction_results_dir, 'test_prediction_results.json')
                 else:  # dev ファイルの結果を出力
-                    output_file = os.path.join(args.prediction_results_dir,
-                                               'test_prediction_results.json')
+                    output_file = os.path.join(args.prediction_results_dir, 'dev_prediction_results_epoch_' + str(epoch) + '.json')
 
             self._save_predictions(output_file, all_results)
 
