@@ -559,8 +559,8 @@ def main():
     args = parser.parse_args()
     if args.config_file:
         args = override_args(args)
-
-    os.makedirs(args.output_dir, exist_ok=True)
+    if args.train_file:
+        os.makedirs(args.output_dir, exist_ok=True)
 
     setup_args_gpu(args)
     set_seed(args)
