@@ -262,7 +262,7 @@ $ bash scripts/raeder/eval_reader.sh \
     -e $test_file \
     -m $model_file
 
-$ ls $DIR_DPR/$exp_name/readed
+$ ls $DIR_DPR/$exp_name/raeder/results/
     results/                        # test セットの評価結果の出力ディレクトリ
 ```
 
