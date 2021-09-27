@@ -4,6 +4,7 @@
 - 昨年度の概要は [こちら](https://sites.google.com/view/nlp2021-aio/)
 
 ## 目次
+
 - [環境構築](#環境構築)
 - [データセット](#データセット)
     - ダウンロード
@@ -32,10 +33,11 @@ $ pip-sync
   - [https:github.com/NVIDIA/apex](https:github.com/NVIDIA/apex)
 
 ## データセット
-- 訓練データには、JAQKET の訓練用クイズ問題（[abc/EQIDEN](http://abc-dive.com/questions/) の第12回大会までの使用問題）に対して Wikipedia の記事段落の付与を自動で行ったものを使用しています。ただし JAQKET とは異なり正解エンティティの付与の可否に基づくフィルタリングは行っておりません。
+
+- 訓練データには、クイズ大会[「abc/EQIDEN」](http://abc-dive.com/questions/) の過去問題に対して Wikipedia の記事段落の付与を自動で行ったものを使用しています。
 - 開発・評価用クイズ問題には、[株式会社キュービック](http://www.qbik.co.jp/) および [クイズ法人カプリティオ](http://capriccio.tokyo/) へ依頼して作成されたものを使用しています。
-  - 開発データは昨年度大会の開発データとして公開したクイズ問題を使用しており、評価データは昨年度大会のリーダーボードとライブコンペで使用したクイズ問題を使用しています。
-- また、第一回向けにクイズ作家に発注したクイズ問題のうち、開発データ、リーダーボード、およびライブコンペで使われなかったクイズ問題（Wikipedia 記事名の付与ができずに除外された問題を含む）を `unused` として公開しています。 
+
+- 以上のデータセットの詳細については、[AI王 〜クイズAI日本一決定戦〜](https://www.nlp.ecei.tohoku.ac.jp/projects/aio/)の公式サイト、および下記論文をご覧ください。
 
 > __JAQKET: クイズを題材にした日本語QAデータセット__
 > - https://www.nlp.ecei.tohoku.ac.jp/projects/jaqket/
@@ -71,6 +73,7 @@ $ bash scripts/download_data.sh <output_dir>
 |未使用|aio_01_unused|608|-|
 |文書集合|jawiki-20210503-paragraphs|-|6,795,533|
 
+- データセットの構築方法の詳細については、[data/README.md](data/README.md)を参照してください。
 
 ### 学習データ
 
@@ -80,7 +83,7 @@ $ bash scripts/download_data.sh <output_dir>
 - `positive_ctxs`：正例文書（答えを含む文書）。以下の辞書で構成されたリスト形式。
     - `id`：文書インデックス
     - `title`：Wikipedia のタイトル
-    - `text`：Wikipedia の記事 
+    - `text`：Wikipedia の記事
 - `negative_ctxs`：負例文書（インバッチネガティブ：ミニバッチ内の他の質問に対する正例文書）。学習中に定義される。
 - `hard_negative_ctxs`: ハード負例文書（質問に類似するが答えを含まない文書。）。`positive_ctxs` と同様の形式。
 
@@ -171,7 +174,7 @@ $ ls $DIR_DPR/$exp_name/retriever
     tensorboard/                    # tensorboard ログディレクトリ (if `--tensorboard_logdir`)
     dpr_biencoder.*.*.pt            # モデルファイル
     hps.json                        # パラメータ
-    run.sh                          # 実行時シェルスクリプト 
+    run.sh                          # 実行時シェルスクリプト
     score_train_retriever_*.jsonl   # ログファイル
 ```
 
@@ -253,7 +256,7 @@ $ ls $DIR_DPR/$exp_name/reader
     tensorboard/                    # tensorboard ログディレクトリ (if `--tensorboard_logdir`)
     dpr_reader.*.*.pt               # モデルファイル
     hps.json                        # パラメータ
-    run.sh                          # 実行時シェルスクリプト 
+    run.sh                          # 実行時シェルスクリプト
     results/                        # dev セットの評価結果の出力ディレクトリ
 ```
 
@@ -294,4 +297,3 @@ __Accuracy__
 - 開発データは クリエイティブ・コモンズ 表示 - 継承 4.0 国際 ライセンスの下に提供されています。
   - <img src="https://i.imgur.com/7HLJWMM.png" alt="" title="">
 - 開発/評価用クイズ問題は [株式会社キュービック](http://www.qbik.co.jp/) および [クイズ法人カプリティオ](http://capriccio.tokyo/) へ依頼して作成されたものを使用しております。
-
