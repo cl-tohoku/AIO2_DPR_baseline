@@ -30,7 +30,7 @@ $ pip-sync
 ```
 
 - fp16 を使用する場合は以下よりインストールして下さい。
-  - [https:github.com/NVIDIA/apex](https:github.com/NVIDIA/apex)
+  - [https://github.com/NVIDIA/apex](https://github.com/NVIDIA/apex)
 
 ## データセット
 
