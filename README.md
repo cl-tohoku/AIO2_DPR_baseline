@@ -1,11 +1,10 @@
-# AI王 〜クイズAI日本一決定戦〜 2021
-
 ![AIO](imgs/aio.png)
 
 - [AI王 〜クイズAI日本一決定戦〜](https://www.nlp.ecei.tohoku.ac.jp/projects/aio/)
 - 昨年度の概要は [こちら](https://sites.google.com/view/nlp2021-aio/)
 
 ## 目次
+
 - [環境構築](#環境構築)
 - [データセット](#データセット)
     - ダウンロード
@@ -23,14 +22,25 @@
 
 
 ## 環境構築
+- 各人のcuda バージョンに合わせて，以下よりtorch をインストールして下さい。
+  - [https://pytorch.org](https://pytorch.org)
 
+- その他のライブラリについては以下のコマンドを実行してインストールして下さい。
 ```bash
 $ pip install pip-tools
 $ pip-compile requirements.in
 $ pip-sync
 ```
 
+- fp16 を使用する場合は以下よりインストールして下さい。
+  - [https://github.com/NVIDIA/apex](https://github.com/NVIDIA/apex)
+
 ## データセット
+
+- 訓練データには、クイズ大会[「abc/EQIDEN」](http://abc-dive.com/questions/) の過去問題に対して Wikipedia の記事段落の付与を自動で行ったものを使用しています。
+- 開発・評価用クイズ問題には、[株式会社キュービック](http://www.qbik.co.jp/) および [クイズ法人カプリティオ](http://capriccio.tokyo/) へ依頼して作成されたものを使用しています。
+
+- 以上のデータセットの詳細については、[AI王 〜クイズAI日本一決定戦〜](https://www.nlp.ecei.tohoku.ac.jp/projects/aio/)の公式サイト、および下記論文をご覧ください。
 
 > __JAQKET: クイズを題材にした日本語QAデータセット__
 > - https://www.nlp.ecei.tohoku.ac.jp/projects/jaqket/
@@ -44,20 +54,29 @@ $ bash scripts/download_data.sh <output_dir>
 
 <output_dir>
 |- wiki/
-|  |- jawiki-20210503-paragraphs.tsv
+|  |- jawiki-20210503-paragraphs.tsv.gz
 |- aio/
-|  |- abc_eqiden_01-12.json
-|  |- dev_jaqket.json
-|  |- test_jaqket.json
+|  |- abc_01-12.json.gz      # 訓練セット
+|  |- aio_01_dev.json.gz     # 開発セット
+|  |- aio_01_test.json.gz    # 評価セット
+|  |- aio_01_unused.json.gz
+
+# 「質問」と「正解」からなる TSV 形式のファイル
+|  |- abc_01-12.tsv      # 訓練セット
+|  |- aio_01_dev.tsv     # 開発セット
+|  |- aio_01_test.tsv    # 評価セット
+|  |- aio_01_unused.tsv
 ```
 
-|データ|質問数|文書数|
-|:---|---:|---:|
-|訓練|17,735|-|
-|開発|1,992|-|
-|評価|2,000|-|
-|wiki|-|6,795,533|
+|データ|ファイル名|質問数|文書数|
+|:---|:---|---:|---:|
+|訓練|abc_01-12|17,735|-|
+|開発|aio_01_dev|1,992|-|
+|評価|aio_01_test|2,000|-|
+|未使用|aio_01_unused|608|-|
+|文書集合|jawiki-20210503-paragraphs|-|6,795,533|
 
+- データセットの構築方法の詳細については、[data/README.md](data/README.md)を参照してください。
 
 ### 学習データ
 
@@ -67,7 +86,7 @@ $ bash scripts/download_data.sh <output_dir>
 - `positive_ctxs`：正例文書（答えを含む文書）。以下の辞書で構成されたリスト形式。
     - `id`：文書インデックス
     - `title`：Wikipedia のタイトル
-    - `text`：Wikipedia の記事 
+    - `text`：Wikipedia の記事
 - `negative_ctxs`：負例文書（インバッチネガティブ：ミニバッチ内の他の質問に対する正例文書）。学習中に定義される。
 - `hard_negative_ctxs`: ハード負例文書（質問に類似するが答えを含まない文書。）。`positive_ctxs` と同様の形式。
 
@@ -158,7 +177,7 @@ $ ls $DIR_DPR/$exp_name/retriever
     tensorboard/                    # tensorboard ログディレクトリ (if `--tensorboard_logdir`)
     dpr_biencoder.*.*.pt            # モデルファイル
     hps.json                        # パラメータ
-    run.sh                          # 実行時シェルスクリプト 
+    run.sh                          # 実行時シェルスクリプト
     score_train_retriever_*.jsonl   # ログファイル
 ```
 
@@ -240,7 +259,7 @@ $ ls $DIR_DPR/$exp_name/reader
     tensorboard/                    # tensorboard ログディレクトリ (if `--tensorboard_logdir`)
     dpr_reader.*.*.pt               # モデルファイル
     hps.json                        # パラメータ
-    run.sh                          # 実行時シェルスクリプト 
+    run.sh                          # 実行時シェルスクリプト
     results/                        # dev セットの評価結果の出力ディレクトリ
 ```
 
@@ -274,3 +293,10 @@ __Accuracy__
 |訓練セット|0.4282|
 |評価セット|0.4625|
 
+
+## 謝辞・ライセンス
+
+- 学習データに含まれるクイズ問題の著作権は [abc/EQIDEN 実行委員会](http://abc-dive.com/questions/) に帰属します。東北大学において研究目的での再配布許諾を得ています。
+- 開発データは クリエイティブ・コモンズ 表示 - 継承 4.0 国際 ライセンスの下に提供されています。
+  - <img src="https://i.imgur.com/7HLJWMM.png" alt="" title="">
+- 開発/評価用クイズ問題は [株式会社キュービック](http://www.qbik.co.jp/) および [クイズ法人カプリティオ](http://capriccio.tokyo/) へ依頼して作成されたものを使用しております。
