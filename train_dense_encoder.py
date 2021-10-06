@@ -290,6 +290,7 @@ class BiEncoderTrainer(object):
                 num_other_negatives, 
                 shuffle=False
             )
+            biencoder_input = BiEncoderBatch(**move_to_device(biencoder_input._asdict(), args.device))
 
             total_ctxs = len(ctx_represenations)
             ctxs_ids = biencoder_input.context_ids
