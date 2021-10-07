@@ -31,37 +31,36 @@ from torch import Tensor as T
 
 from dpr.models import init_biencoder_components
 from dpr.models.biencoder import (
-    BiEncoder, 
-    BiEncoderNllLoss, 
+    BiEncoder,
+    BiEncoderNllLoss,
     BiEncoderBatch
 )
 from dpr.options import (
-    add_encoder_params, 
-    add_training_params, 
+    add_encoder_params,
+    add_training_params,
     override_args,
-    setup_args_gpu, 
-    set_seed, 
+    setup_args_gpu,
+    set_seed,
     print_args,
-    get_encoder_params_state, 
-    add_tokenizer_params, 
+    get_encoder_params_state,
+    add_tokenizer_params,
     set_encoder_params_from_state
 )
 from dpr.utils.data_utils import (
-    ShardedDataIterator, 
-    read_data_from_json_files, 
+    ShardedDataIterator,
+    read_data_from_json_files,
     Tensorizer
 )
 from dpr.utils.dist_utils import all_gather_list
 from dpr.utils.model_utils import (
-    setup_for_distributed_mode, 
-    move_to_device, 
-    get_schedule_linear, 
+    setup_for_distributed_mode,
+    move_to_device,
+    get_schedule_linear,
     CheckpointState,
-    get_model_file, 
-    get_model_obj, 
+    get_model_file,
+    get_model_obj,
     load_states_from_checkpoint
 )
-
 
 logging.basicConfig(
     format='%(asctime)s #%(lineno)s %(levelname)s %(name)s :::  %(message)s',
@@ -81,7 +80,7 @@ class BiEncoderTrainer(object):
     and dense_retriever.py CLI tools.
     """
 
-    def __init__(self, args:Namespace):
+    def __init__(self, args: Namespace):
         self.args = args
         self.shard_id = args.local_rank if args.local_rank != -1 else 0
         self.distributed_factor = args.distributed_world_size or 1
@@ -96,7 +95,8 @@ class BiEncoderTrainer(object):
             set_encoder_params_from_state(saved_state.encoder_params, args)
 
         tensorizer, model, optimizer = init_biencoder_components(args.encoder_model_type, args)
-        model, optimizer = setup_for_distributed_mode(model, optimizer, args.device, args.n_gpu, args.local_rank, args.fp16, args.fp16_opt_level)
+        model, optimizer = setup_for_distributed_mode(model, optimizer, args.device, args.n_gpu, args.local_rank,
+                                                      args.fp16, args.fp16_opt_level)
 
         self.biencoder = model
         self.optimizer = optimizer
@@ -114,10 +114,11 @@ class BiEncoderTrainer(object):
         misc = '_'.join([f'{k}{v}' for k, v in kwargs.items()])
         return f'{date}_{misc}'
 
-    def get_data_iterator(self, path:str, batch_size:int, shuffle:bool=True, shuffle_seed:int=0, offset:int=0, upsample_rates:list=None) -> ShardedDataIterator:
+    def get_data_iterator(self, path: str, batch_size: int, shuffle: bool = True, shuffle_seed: int = 0,
+                          offset: int = 0, upsample_rates: list = None) -> ShardedDataIterator:
         data_files = glob.glob(path)
         data = read_data_from_json_files(data_files, upsample_rates)
-        data = [r for r in data if len(r['positive_ctxs']) > 0]       # filter those without positive ctx
+        data = [r for r in data if len(r['positive_ctxs']) > 0]  # filter those without positive ctx
         logger.info('Total cleaned data size: {}'.format(len(data)))
 
         return ShardedDataIterator(
@@ -127,7 +128,7 @@ class BiEncoderTrainer(object):
             batch_size=batch_size,
             shuffle=shuffle,
             shuffle_seed=shuffle_seed,
-            offset=offset
+            offset=offset,
             strict_batch_size=True,  # this is not really necessary, one can probably disable it
         )
 
@@ -137,7 +138,8 @@ class BiEncoderTrainer(object):
         if args.train_files_upsample_rates is not None:
             upsample_rates = eval(args.train_files_upsample_rates)
 
-        train_iterator = self.get_data_iterator(args.train_file, args.batch_size, shuffle=True, shuffle_seed=args.seed, offset=self.start_batch, upsample_rates=upsample_rates)
+        train_iterator = self.get_data_iterator(args.train_file, args.batch_size, shuffle=True, shuffle_seed=args.seed,
+                                                offset=self.start_batch, upsample_rates=upsample_rates)
         dev_iterator = self.get_data_iterator(args.dev_file, args.dev_batch_size, shuffle=False)
 
         logger.info("  Total iterations per epoch=%d", train_iterator.max_iterations)
@@ -160,8 +162,8 @@ class BiEncoderTrainer(object):
         fo_score = os.path.join(args.output_dir, f'score_train_retriever_{self.model_id}.jsonl')
         with open(fo_score, 'w') as fo_jsl:
             for epoch in range(self.start_epoch, int(args.num_train_epochs)):
-                logger.info("***** Epoch %d/%d *****", epoch, args.num_train_epochs)
-                do_save = ((epoch+1) % args.eval_per_epoch == 0)    # 0 start
+                logger.info("***** Epoch %d *****", epoch)
+                do_save = ((epoch + 1) % args.eval_per_epoch == 0)  # 0 start
                 epoch_score = self._train_epoch(scheduler, epoch, train_iterator, dev_iterator, do_save=do_save)
                 epoch_scores.append(epoch_score)
                 fo_jsl.write(json.dumps(epoch_score, ensure_ascii=False) + '\n')
@@ -173,25 +175,20 @@ class BiEncoderTrainer(object):
         if args.local_rank in [-1, 0]:
             logger.info('Training finished.')
 
-    def write_tensorboard(self, args:Namespace, epoch_scores:List[dict]):
+    def write_tensorboard(self, args: Namespace, epoch_scores: List[dict]):
         from torch.utils.tensorboard import SummaryWriter
         dest = os.path.join(args.tensorboard_dir, self.model_id)
         os.makedirs(dest, exist_ok=True)
         with SummaryWriter(log_dir=dest, filename_suffix='retriever_train') as writer:
-            # min_loss, max_acc, best_epoch = np.inf, -np.inf, 0
             for epoch, epoch_score in enumerate(epoch_scores):
                 writer.add_scalar(f'Loss/train', epoch_score['train_loss'], epoch)
                 writer.add_scalar(f'Loss/valid', epoch_score['valid_loss'], epoch)
-                writer.add_scalar(f'Acc/train', epoch_score['train_acc'], epoch)
-                writer.add_scalar(f'Acc/valid', epoch_score['valid_acc'], epoch)
+                writer.add_scalar(f'Acc/train', epoch_score['train_accuracy'], epoch)
+                writer.add_scalar(f'Acc/valid', epoch_score['valid_accuracy'], epoch)
                 writer.add_scalar(f'Av.Rank/valid', epoch_score['valid_ave_rank'], epoch)
-                # if epoch_score['valid_loss'] < min_loss:
-                #     min_loss = epoch_score['valid_loss']
-                #     max_acc = epoch_score['valid_acc']
-                #     best_epoch = epoch
         logger.info(f'Write tensorboard log file @ {dest}')
 
-    def validate_and_save(self, epoch:int, iteration:int, scheduler, eval_iterator=None, do_save=True):
+    def validate_and_save(self, epoch: int, iteration: int, scheduler, eval_iterator=None, do_save=True):
         args = self.args
         # for distributed mode, save checkpoint for only one process
         # save_cp = args.local_rank in [-1, 0]
@@ -227,11 +224,11 @@ class BiEncoderTrainer(object):
         batches = 0
         for i, samples_batch in enumerate(data_iterator.iterate_data(is_retriever=True)):
             biencoder_input = BiEncoder.create_biencoder_input(
-                samples_batch, 
+                samples_batch,
                 self.tensorizer,
                 True,
-                num_hard_negatives, 
-                num_other_negatives, 
+                num_hard_negatives,
+                num_other_negatives,
                 shuffle=False
             )
 
@@ -288,13 +285,14 @@ class BiEncoderTrainer(object):
                 break
 
             biencoder_input = BiEncoder.create_biencoder_input(
-                samples_batch, 
+                samples_batch,
                 self.tensorizer,
                 True,
-                num_hard_negatives, 
-                num_other_negatives, 
+                num_hard_negatives,
+                num_other_negatives,
                 shuffle=False
             )
+            biencoder_input = BiEncoderBatch(**move_to_device(biencoder_input._asdict(), args.device))
 
             total_ctxs = len(ctx_represenations)
             ctxs_ids = biencoder_input.context_ids
@@ -366,7 +364,8 @@ class BiEncoderTrainer(object):
         return av_rank
 
     def _train_epoch(self, scheduler, epoch: int,
-            train_data_iterator: ShardedDataIterator, dev_data_iterator: ShardedDataIterator, do_save:bool=True):
+                     train_data_iterator: ShardedDataIterator, dev_data_iterator: ShardedDataIterator,
+                     do_save: bool = True):
 
         args = self.args
         rolling_train_loss = 0.0
@@ -399,18 +398,18 @@ class BiEncoderTrainer(object):
             data_iteration = train_data_iterator.get_iteration()
             random.seed(seed + epoch + data_iteration)
             biencoder_batch = BiEncoder.create_biencoder_input(
-                samples_batch, 
+                samples_batch,
                 self.tensorizer,
                 True,
-                num_hard_negatives, 
-                num_other_negatives, 
+                num_hard_negatives,
+                num_other_negatives,
                 shuffle=True,
                 shuffle_positives=args.shuffle_positive_ctx
             )
 
             loss, correct_cnt = _do_biencoder_fwd_pass(self.biencoder, biencoder_batch, self.tensorizer, args)
 
-            epoch_correct_predictions += correct_cnt    # sum(gold_ctxs == max_ctxs)
+            epoch_correct_predictions += correct_cnt  # sum(gold_ctxs == max_ctxs)
             epoch_loss += loss.item()
             rolling_train_loss += loss.item()
             total_samples += int(biencoder_batch.question_ids.size(0))
@@ -447,15 +446,17 @@ class BiEncoderTrainer(object):
             #     self.validate_and_save(epoch, train_data_iterator.get_iteration(), scheduler, eval_iterator=dev_data_iterator)
             #     self.biencoder.train()
 
-        valid_loss, valid_accuracy, average_rank = self.validate_and_save(epoch, data_iteration, scheduler, eval_iterator=dev_data_iterator, do_save=do_save)
+        valid_loss, valid_accuracy, average_rank = self.validate_and_save(epoch, data_iteration, scheduler,
+                                                                          eval_iterator=dev_data_iterator,
+                                                                          do_save=do_save)
         epoch_loss = (epoch_loss / epoch_batches) if epoch_batches > 0 else 0
-        train_accuracy = float(epoch_correct_predictions / total_samples) if total_samples>0 else -np.inf
+        train_accuracy = float(epoch_correct_predictions / total_samples) if total_samples > 0 else -np.inf
         logger.info('Av Loss per epoch=%f', epoch_loss)
         logger.info('epoch total correct predictions=%d', epoch_correct_predictions)
 
         return {
             'epoch': epoch,
-            'train_loss': epoch_loss, 
+            'train_loss': epoch_loss,
             'valid_loss': valid_loss,
             'train_accuracy': train_accuracy,
             'valid_accuracy': valid_accuracy,
@@ -470,7 +471,7 @@ class BiEncoderTrainer(object):
             "{cp}.{epoch}{offset}.pt".format(
                 cp=args.checkpoint_file_name,
                 epoch=epoch,
-                offset=f'.{offset}' if offset>0 else '',
+                offset=f'.{offset}' if offset > 0 else '',
             )
         )
 
@@ -481,7 +482,7 @@ class BiEncoderTrainer(object):
             self.optimizer.state_dict(),
             scheduler.state_dict(),
             offset,
-            epoch, 
+            epoch,
             meta_params
         )
         torch.save(state._asdict(), fo_ckpt)
@@ -560,8 +561,8 @@ def _calc_loss(args, loss_function, local_q_vector, local_ctx_vectors, local_pos
         hard_negatives_per_question = local_hard_negatives_idxs
 
     loss, is_correct = loss_function.calc(
-        global_q_vector, 
-        global_ctxs_vector, 
+        global_q_vector,
+        global_ctxs_vector,
         positive_idx_per_question,
         hard_negatives_per_question
     )
@@ -569,7 +570,8 @@ def _calc_loss(args, loss_function, local_q_vector, local_ctx_vectors, local_pos
     return loss, is_correct
 
 
-def _do_biencoder_fwd_pass(model: nn.Module, input: BiEncoderBatch, tensorizer: Tensorizer, args) -> (torch.Tensor, int):
+def _do_biencoder_fwd_pass(model: nn.Module, input: BiEncoderBatch, tensorizer: Tensorizer, args) -> (
+torch.Tensor, int):
     input = BiEncoderBatch(**move_to_device(input._asdict(), args.device))
 
     q_attn_mask = tensorizer.get_attn_mask(input.question_ids)
@@ -645,7 +647,8 @@ def create_arg_parser():
 
     # additional parameters
     misc = parser.add_argument_group('Group of Additional Parameters')
-    misc.add_argument('--tensorboard_dir', type=str, default=None, help='The output directory where the tensorboard log will be written to')
+    misc.add_argument('--tensorboard_dir', type=str, default=None,
+                      help='The output directory where the tensorboard log will be written to')
     misc.add_argument('--config_file', type=str, default=None, help='Parameter file')
 
     return parser
@@ -668,7 +671,7 @@ def main():
     args = parser.parse_args()
     if args.config_file:
         args = override_args(args)
-    
+
     os.makedirs(args.output_dir, exist_ok=True)
 
     # save argparse parameters @ args.output_dir
