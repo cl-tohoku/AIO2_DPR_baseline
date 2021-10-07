@@ -21,7 +21,7 @@ test "${FLG_G}" == "TRUE" && export CUDA_VISIBLE_DEVICES=$GPU
 # Eval Reader =============================
 
 set -ex
-source scipts/configs/config.pth
+source scripts/configs/config.pth
 
 DIR_PROJECT=$DIR_DPR/$NAME
 # cp $CONFIG $DIR_PROJECT/reader/hps.json
@@ -38,4 +38,4 @@ python train_reader.py \
     --config $DIR_PROJECT/reader/hps.json \
 | tee -a $LOG_FILE
 
-grep "EM" $LOG_FILE > $DIR_PROJECT/rader/reults/eval_accuracy.txt
+grep "EM" $LOG_FILE > $DIR_PROJECT/reader/results/eval_accuracy.txt

@@ -22,7 +22,7 @@ set -ex
 source scripts/configs/config.pth
 
 DIR_PROJECT=$DIR_DPR/$NAME
-mkdir -p $DIR_PROJECT/retriever
+mkdir -p $DIR_PROJECT/retriever/logs
 cp $CONFIG $DIR_PROJECT/retriever/hps.json
 cp $0 $DIR_PROJECT/retriever/logs/run_${DATE}.sh
 
