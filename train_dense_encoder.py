@@ -163,7 +163,7 @@ class BiEncoderTrainer(object):
         with open(fo_score, 'w') as fo_jsl:
             for epoch in range(self.start_epoch, int(args.num_train_epochs)):
                 logger.info("***** Epoch %d *****", epoch)
-                do_save = ((epoch + 1) % args.eval_per_epoch == 0)  # 0 start
+                do_save = ((epoch+1) % args.eval_per_epoch == 0)    # 0 start
                 epoch_score = self._train_epoch(scheduler, epoch, train_iterator, dev_iterator, do_save=do_save)
                 epoch_scores.append(epoch_score)
                 fo_jsl.write(json.dumps(epoch_score, ensure_ascii=False) + '\n')
