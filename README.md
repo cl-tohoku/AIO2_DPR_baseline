@@ -24,9 +24,7 @@
 ## 環境構築
 
 ```bash
-$ pip install pip-tools
-$ pip-compile requirements.in
-$ pip-sync
+$ pip install -r requirements.txt
 ```
 
 - fp16 を使用する場合は以下よりインストールして下さい。
