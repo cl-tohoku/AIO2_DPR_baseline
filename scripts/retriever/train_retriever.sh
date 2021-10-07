@@ -24,9 +24,9 @@ source scripts/configs/config.pth
 DIR_PROJECT=$DIR_DPR/$NAME
 mkdir -p $DIR_PROJECT/retriever
 cp $CONFIG $DIR_PROJECT/retriever/hps.json
-cp $0 $DIR_PROJECT/retriever/run.sh
+cp $0 $DIR_PROJECT/retriever/logs/run_${DATE}.sh
 
-LOG_FILE=$DIR_PROJECT/logs/retriever/train_${DATE}.log
+LOG_FILE=$DIR_PROJECT/retriever/logs/train_${DATE}.log
 mkdir -p `dirname $LOG_FILE`
 echo "# bash $0 $@" > $LOG_FILE
 
