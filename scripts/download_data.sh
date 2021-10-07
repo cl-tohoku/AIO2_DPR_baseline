@@ -20,6 +20,7 @@ wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/retriever/ai
 wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/retriever/aio_01_test.json.gz -P $DEST/aio
 wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/retriever/aio_01_unused.json.gz -P $DEST/aio
 
+
 wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/qas/abc_01-12.tsv -P $DEST/aio
 wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/qas/aio_01_dev.tsv -P $DEST/aio
 wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/qas/aio_01_test.tsv -P $DEST/aio
@@ -30,8 +31,6 @@ wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/qas/aio_01_u
 mkdir -p $DEST/wiki
 wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/wikipedia_split/jawiki-20210503-paragraphs.tsv.gz -P $DEST/wiki
 
-
-
 cat << END > scripts/configs/config.pth
 # data
 WIKI_FILE=$DEST/wiki/jawiki-20210503-paragraphs.tsv.gz
@@ -39,8 +38,8 @@ TRAIN_FILE=$DEST/aio/abc_01-12.json.gz
 DEV_FILE=$DEST/aio/aio_01_dev.json.gz
 TEST_FILE=$DEST/aio/aio_01_test.json.gz
 
-# dest (To create models, embeddings, etc under `$DIR_DPR/$NAME`)
-DIR_DPR=outputs
+# dest (To create models, embeddings, etc under \$DIR_DPR/\$NAME)
+DIR_DPR=outputs/
 END
 
 

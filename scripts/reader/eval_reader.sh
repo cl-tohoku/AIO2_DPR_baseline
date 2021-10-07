@@ -38,3 +38,5 @@ python train_reader.py \
     --prediction_results_dir $DIR_PROJECT/reader/results \
     --config $DIR_PROJECT/reader/hps.json \
 | tee -a $LOG_FILE
+
+grep "EM" $LOG_FILE > $DIR_PROJECT/rader/reults/eval_accuracy.txt

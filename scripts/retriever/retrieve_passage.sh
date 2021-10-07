@@ -40,7 +40,7 @@ params="
 declare -A QA_FILES
 QA_FILES["dev"]=$DEV_FILE
 QA_FILES["train"]=$TRAIN_FILE
-# QA_FILES["test"]=$TEST_FILE
+QA_FILES["test"]=$TEST_FILE
 
 
 for KEY in ${!QA_FILES[@]} ; do

@@ -1,5 +1,5 @@
 #!/bin/bash
-USAGE="bash $0 [-n NAME] [-c CONFIG] [-t TRAIN_FILE] [-d DEV_FILE] [-g GPU]"
+USAGE="bash $0 [-n NAME] [-c CONFIG] [-t TRAIN_READER_FILE] [-d DEV_READER_FILE] [-g GPU]"
 DATE=`date +%Y%m%d-%H%M`
 
 while getopts n:c:t:d:g: opt ; do
@@ -35,8 +35,8 @@ mkdir -p `dirname $LOG_FILE`
 echo "# bash $0 $@" > $LOG_FILE
 
 python train_reader.py \
-  --train_file $TRAIN_FILE \
-  --dev_file $DEV_FILE \
+  --train_file $TRAIN_READER_FILE \
+  --dev_file $DEV_READER_FILE \
   --output_dir $DIR_PROJECT/reader \
   --tensorboard_dir $DIR_PROJECT/reader/tensorboard \
   --prediction_results_dir $DIR_PROJECT/reader/results \
