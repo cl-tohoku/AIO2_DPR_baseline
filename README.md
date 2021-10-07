@@ -281,11 +281,11 @@ $ bash scripts/raeder/eval_reader.sh \
 
 $ ls $DIR_DPR/$exp_name/raeder/results/
     test_prediction_resuls.json         # test セットの評価結果の出力ディレクトリ
-    eval_accuracy.txt                    # test セットの正解率(Exact Match)の出力ファイル
+    eval_accuracy.txt                   # test セットの正解率(Exact Match)の出力ファイル
 ```
 
 __Accuracy__
-- 上位 100 件の文書を用いた時の正解率(Exact Match))
+- 上位 100 件の文書を用いた時の正解率(Exact Match)
 
 |データ|Acc|
 |:---|---:|
