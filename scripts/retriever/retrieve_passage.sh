@@ -45,7 +45,7 @@ QA_FILES["test"]=$TEST_FILE
 
 for KEY in ${!QA_FILES[@]} ; do
   FO_FILE=$DIR_PROJECT/retrieved/${KEY}_jaqket_${EPOCH_STEP}.json
-  LOG_FILE=$DIR_PROJECT/logs/retriever/predict_${KEY}_${DATE}.log
+  LOG_FILE=$DIR_PROJECT/retrieved/logs/predict_${KEY}_${DATE}.log
   mkdir -p `dirname $LOG_FILE`
   echo "# bash $0 $@" > $LOG_FILE
 

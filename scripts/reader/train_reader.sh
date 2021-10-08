@@ -6,8 +6,8 @@ while getopts n:c:t:d:g: opt ; do
   case ${opt} in
     n ) FLG_N="TRUE"; NAME=${OPTARG};;
     c ) FLG_C="TRUE"; CONFIG=${OPTARG};;
-    t ) FLG_T="TRUE"; TRAIN_FILE=${OPTARG};;
-    d ) FLG_D="TRUE"; DEV_FILE=${OPTARG};;
+    t ) FLG_T="TRUE"; TRAIN_READER_FILE=${OPTARG};;
+    d ) FLG_D="TRUE"; DEV_READER_FILE=${OPTARG};;
     g ) FLG_G="TRUE"; GPU=${OPTARG};;
     * ) echo ${USAGE} 1>&2; exit 1 ;;
   esac
@@ -26,12 +26,11 @@ set -ex
 source scripts/configs/config.pth
 
 DIR_PROJECT=$DIR_DPR/$NAME
-mkdir -p $DIR_PROJECT/reader -p $DIR_PROJECT/reader/tensorboard -p $DIR_PROJECT/reader/results
+mkdir -p $DIR_PROJECT/reader/tensorboard $DIR_PROJECT/reader/results $DIR_PROJECT/reader/logs
 cp $CONFIG $DIR_PROJECT/reader/hps.json
-cp $0 $DIR_PROJECT/reader/run.sh
+cp $0 $DIR_PROJECT/reader/logs/run_${DATE}.sh
 
-LOG_FILE=$DIR_PROJECT/logs/reader/train_${DATE}.log
-mkdir -p `dirname $LOG_FILE`
+LOG_FILE=$DIR_PROJECT/reader/logs/train_${DATE}.log
 echo "# bash $0 $@" > $LOG_FILE
 
 python train_reader.py \

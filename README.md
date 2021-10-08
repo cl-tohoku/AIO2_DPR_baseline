@@ -22,16 +22,15 @@
 
 
 ## 環境構築
-- 各人のcuda バージョンに合わせて，以下よりtorch をインストールして下さい。
+- cuda バージョンに合わせて、以下より torch をインストールして下さい。
   - [https://pytorch.org](https://pytorch.org)
-
+- fp16 を使用する場合は、以下より apex をインストールして下さい。
+  - [https://github.com/NVIDIA/apex](https://github.com/NVIDIA/apex)
 - その他のライブラリについては以下のコマンドを実行してインストールして下さい。
+
 ```bash
 $ pip install -r requirements.txt
 ```
-
-- fp16 を使用する場合は以下よりインストールして下さい。
-  - [https://github.com/NVIDIA/apex](https://github.com/NVIDIA/apex)
 
 ## データセット
 
@@ -172,11 +171,13 @@ $ bash scripts/retriever/train_retriever.sh \
 # 実行結果
 
 $ ls $DIR_DPR/$exp_name/retriever
-    tensorboard/                    # tensorboard ログディレクトリ (if `--tensorboard_logdir`)
     dpr_biencoder.*.*.pt            # モデルファイル
     hps.json                        # パラメータ
-    run.sh                          # 実行時シェルスクリプト
-    score_train_retriever_*.jsonl   # ログファイル
+    score_train_retriever_*.jsonl   # 訓練時スコアログ
+    logs/
+      run_*.sh                      # 実行時シェルスクリプト
+      train_*.log                   # 実行時ログ
+    tensorboard/                    # tensorboard ログディレクトリ (if `--tensorboard_logdir`)
 ```
 
 #### 2. 文書集合のエンコード
@@ -197,6 +198,8 @@ $ bash scripts/retriever/encode_ctxs.sh \
 
 $ ls $DIR_DPR/$exp_name/embeddings
     emb_${model}.pickle             # 文書エンベッディング
+    logs/
+      embs_*.log                    # 実行時ログ
 ```
 
 #### 3. データセットの質問に関連する文書抽出
@@ -216,10 +219,11 @@ $ bash scripts/retriever/retrieve_passage.sh \
     -e $embed
 
 # 実行結果
-
 $ ls $DIR_DPR/$exp_name/retrieved
     train_*.*.json   dev_*.*.json   test_*.*.json   # 予測結果（reader 学習データ）
     train_*.*.tsv    dev_*.*.tsv    test_*.*.tsv    # 予測スコア（Acc@k を含む）
+    logs/
+      predict_*_*.log                               # 実行時ログ
 ```
 
 __Acc@k__
@@ -254,11 +258,13 @@ $ bash scripts/raeder/train_reader.sh \
 # 実行結果
 
 $ ls $DIR_DPR/$exp_name/reader
-    tensorboard/                    # tensorboard ログディレクトリ (if `--tensorboard_logdir`)
     dpr_reader.*.*.pt               # モデルファイル
     hps.json                        # パラメータ
-    run.sh                          # 実行時シェルスクリプト
+    logs/
+      run_*.sh                      # 実行時シェルスクリプト
+      train_*.log                   # 実行時ログ
     results/                        # dev セットの評価結果の出力ディレクトリ
+    tensorboard/                    # tensorboard ログディレクトリ (if `--tensorboard_logdir`)
 ```
 
 #### 5. 評価
@@ -281,11 +287,11 @@ $ bash scripts/raeder/eval_reader.sh \
 
 $ ls $DIR_DPR/$exp_name/raeder/results/
     test_prediction_resuls.json         # test セットの評価結果の出力ディレクトリ
-    eval_accuracy.txt                   # test セットの正解率(Exact Match)の出力ファイル
+    eval_accuracy.txt                   # test セットの正解率 (Exact Match) の出力ファイル
 ```
 
 __Accuracy__
-- 上位 100 件の文書を用いた時の正解率(Exact Match)
+- 上位 100 件の文書を用いた時の正解率 (Exact Match)
 
 |データ|Acc|
 |:---|---:|
