@@ -23,7 +23,7 @@ set -ex
 source scripts/configs/config.pth
 DIR_PROJECT=$DIR_DPR/$NAME
 
-LOG_FILE=$DIR_PROJECT/logs/retriever/embs_${DATE}.log
+LOG_FILE=$DIR_PROJECT/embeddings/logs/embs_${DATE}.log
 mkdir -p `dirname $LOG_FILE`
 echo "# bash $0 $@" > $LOG_FILE
 
