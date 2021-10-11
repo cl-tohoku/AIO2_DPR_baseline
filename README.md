@@ -155,7 +155,7 @@ $ vim scripts/configs/config.pth
 ![retriever](imgs/retriever.png)
 
 #### 1. BiEncoder の学習
-質問と文書の類似度を計算するため、質問エンコーダおよび文書エンコーダで構成される BiEncoder を学習します。デフォルトのパラメータでは、4GPU (Tesla V100-SXM2-16GB) を用いて4時間程度の学習時間を要しました。
+質問と文書の類似度を計算するため、質問エンコーダおよび文書エンコーダで構成される BiEncoder を学習します。デフォルトのパラメータでは、4GPU (Tesla V100-SXM2-16GB) を用いて6時間程度の学習時間を要しました。
 - [scripts/retriever/train_retriever.sh](scripts/retriever/train_retriever.sh)
 
 ```bash
@@ -181,7 +181,7 @@ $ ls $DIR_DPR/$exp_name/retriever
 ```
 
 #### 2. 文書集合のエンコード
-質問と文書の類似度を計算する前に、文書集合（Wikipedia）を文書エンコーダでエンコードします。エンコードには、4GPU (Tesla V100-SXM2-16GB) を用いて2時間程度の実行時間を要しました。
+質問と文書の類似度を計算する前に、文書集合（Wikipedia）を文書エンコーダでエンコードします。エンコードには、4GPU (Tesla V100-SXM2-16GB) を用いて3時間程度の実行時間を要しました。
 - [scripts/retriever/encode_ctxs.sh](scripts/retriever/encode_ctxs.sh)
 
 ```bash
@@ -231,8 +231,9 @@ __Acc@k__
 
 |データ|Acc@1|Acc@5|Acc@10|Acc@50|Acc@100|
 |:---|---:|---:|---:|---:|---:|
-|訓練セット|40.16|65.38|73.24|84.58|87.20|
-|評価セット|35.49|59.19|68.02|83.63|88.81|
+|訓練セット|42.99|68.36|75.71|85.35|87.74|
+|開発セット|36.30|60.44|69.33|85.34|89.21|
+|評価セット|36.85|62.80|69.9|84.95|89.10|
 
 
 ### Reader
