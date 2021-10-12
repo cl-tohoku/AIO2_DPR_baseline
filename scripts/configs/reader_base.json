@@ -1,7 +1,7 @@
 {
     "seed": 2021,
 
-    "num_train_epochs": 50,
+    "num_train_epochs": 3,
     "eval_step": 2000,
     "log_batch_step": 100,
     "train_rolling_loss_step": 100,

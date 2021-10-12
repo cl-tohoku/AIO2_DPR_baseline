@@ -4,6 +4,7 @@
 - 昨年度の概要は [こちら](https://sites.google.com/view/nlp2021-aio/)
 
 ## 目次
+以下に記した実行手順の一連の流れについては、[./do_example_run.sh](./do_example_run.sh) に記載していますので、こちらもご確認下さい。
 
 - [環境構築](#環境構築)
 - [データセット](#データセット)
@@ -37,7 +38,7 @@ $ pip install -r requirements.txt
 - 訓練データには、クイズ大会[「abc/EQIDEN」](http://abc-dive.com/questions/) の過去問題に対して Wikipedia の記事段落の付与を自動で行ったものを使用しています。
 - 開発・評価用クイズ問題には、[株式会社キュービック](http://www.qbik.co.jp/) および [クイズ法人カプリティオ](http://capriccio.tokyo/) へ依頼して作成されたものを使用しています。
 
-- 以上のデータセットの詳細については、[AI王 〜クイズAI日本一決定戦〜](https://www.nlp.ecei.tohoku.ac.jp/projects/aio/)の公式サイト、および下記論文をご覧ください。
+- 以上のデータセットの詳細については、[AI王 〜クイズAI日本一決定戦〜](https://www.nlp.ecei.tohoku.ac.jp/projects/aio/)の公式サイト、および下記論文をご覧下さい。
 
 > __JAQKET: クイズを題材にした日本語QAデータセット__
 > - https://www.nlp.ecei.tohoku.ac.jp/projects/jaqket/
@@ -73,7 +74,7 @@ $ bash scripts/download_data.sh <output_dir>
 |未使用|aio_01_unused|608|-|
 |文書集合|jawiki-20210503-paragraphs|-|6,795,533|
 
-- データセットの構築方法の詳細については、[data/README.md](data/README.md)を参照してください。
+- データセットの構築方法の詳細については、[data/README.md](data/README.md)を参照して下さい。
 
 ### 学習データ
 
@@ -155,7 +156,7 @@ $ vim scripts/configs/config.pth
 ![retriever](imgs/retriever.png)
 
 #### 1. BiEncoder の学習
-質問と文書の類似度を計算するため、質問エンコーダおよび文書エンコーダで構成される BiEncoder を学習します。デフォルトのパラメータでは、4GPU (Tesla V100-SXM2-16GB) を用いて4時間程度の学習時間を要しました。
+質問と文書の類似度を計算するため、質問エンコーダおよび文書エンコーダで構成される BiEncoder を学習します。デフォルトのパラメータでは、4GPU (Tesla V100-SXM2-16GB) を用いて6時間程度の学習時間を要しました。
 - [scripts/retriever/train_retriever.sh](scripts/retriever/train_retriever.sh)
 
 ```bash
@@ -181,7 +182,7 @@ $ ls $DIR_DPR/$exp_name/retriever
 ```
 
 #### 2. 文書集合のエンコード
-質問と文書の類似度を計算する前に、文書集合（Wikipedia）を文書エンコーダでエンコードします。エンコードには、4GPU (Tesla V100-SXM2-16GB) を用いて2時間程度の実行時間を要しました。
+質問と文書の類似度を計算する前に、文書集合（Wikipedia）を文書エンコーダでエンコードします。エンコードには、4GPU (Tesla V100-SXM2-16GB) を用いて3時間程度の実行時間を要しました。
 - [scripts/retriever/encode_ctxs.sh](scripts/retriever/encode_ctxs.sh)
 
 ```bash
@@ -231,14 +232,15 @@ __Acc@k__
 
 |データ|Acc@1|Acc@5|Acc@10|Acc@50|Acc@100|
 |:---|---:|---:|---:|---:|---:|
-|訓練セット|40.16|65.38|73.24|84.58|87.20|
-|評価セット|35.49|59.19|68.02|83.63|88.81|
+|訓練セット|42.99|68.36|75.71|85.35|87.74|
+|開発セット|36.30|60.44|69.33|85.34|89.21|
+|評価セット|36.85|62.80|69.9|84.95|89.10|
 
 
 ### Reader
 
 #### 4. Reader の学習
-関連文書を用いて QA の読解モデルを学習します。学習には、4GPU (Tesla V100-SXM2-16GB) を用いて2時間程度の実行時間を要しました。
+関連文書を用いて QA の読解モデルを学習します。学習には、4GPU (Tesla V100-SXM2-16GB) を用いて1時間程度の実行時間を要しました。
 - [scripts/reader/train_reader.sh](scripts/reader/train_reader.sh)
 
 ```bash
@@ -287,7 +289,7 @@ $ bash scripts/raeder/eval_reader.sh \
 
 $ ls $DIR_DPR/$exp_name/raeder/results/
     test_prediction_resuls.json         # test セットの評価結果の出力ディレクトリ
-    eval_accuracy.txt                   # test セットの正解率 (Exact Match) の出力ファイル
+    eval_accuracy.txt                   # 正解率 (Exact Match) の出力ファイル
 ```
 
 __Accuracy__
@@ -295,8 +297,19 @@ __Accuracy__
 
 |データ|Acc|
 |:---|---:|
-|訓練セット|42.82|
-|評価セット|46.25|
+|開発セット|56.93|
+|評価セット|57.85|
+
+
+※ __5. 評価__ で出力された eval_accuracy.txt を参照して下さい：
+
+```bash
+# 出力例
+$ cat $DIR_DPR/$exp_name/reader/results/eval_accuracy.txt
+
+### AIO2_DPR_baseline/outputs/baseline/retrieved/dev_jaqket_59.230.json
+2021-10-12 11:28:17 #239 INFO __main__ :::  n=100       EM 56.93
+```
 
 
 ## 謝辞・ライセンス

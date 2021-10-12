@@ -7,3 +7,5 @@ scripts/abci
 
 .python-version
 **/*debug.json
+
+log_*
