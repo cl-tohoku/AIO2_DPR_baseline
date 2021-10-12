@@ -513,7 +513,7 @@ class ReaderTrainer(object):
                         }
                     } for top_k, span_pred in r.predictions.items()]
                 })
-            output.write(json.dumps(save_results, indent=4) + "\n")
+            output.write(json.dumps(save_results, indent=4, ensure_ascii=False) + "\n")
 
 
 def main():
