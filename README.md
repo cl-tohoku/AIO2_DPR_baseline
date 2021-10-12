@@ -240,7 +240,7 @@ __Acc@k__
 ### Reader
 
 #### 4. Reader の学習
-関連文書を用いて QA の読解モデルを学習します。学習には、4GPU (Tesla V100-SXM2-16GB) を用いて10時間程度の実行時間を要しました。
+関連文書を用いて QA の読解モデルを学習します。学習には、4GPU (Tesla V100-SXM2-16GB) を用いて1時間程度の実行時間を要しました。
 - [scripts/reader/train_reader.sh](scripts/reader/train_reader.sh)
 
 ```bash
