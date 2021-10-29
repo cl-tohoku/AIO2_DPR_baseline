@@ -455,6 +455,8 @@ class ReaderTrainer(object):
         def _find_cached_files(path: str):
             dir_path, base_name = os.path.split(path)
             base_name = base_name.replace('.json', '')
+            if not is_train and "train" in base_name:  # train data を評価する場合
+                base_name = base_name + ".eval"  # 評価用のtrain data を前処理するためのファイル名に変更
             out_file_prefix = os.path.join(dir_path, base_name)
             out_file_pattern = out_file_prefix + '*.pkl'
             return glob.glob(out_file_pattern), out_file_prefix
