@@ -251,7 +251,7 @@ $ config_file="scripts/configs/reader_base.json"
 $ train_file="path/to/retrieved/train/file"
 $ dev_file="path/to/retrieved/dev/file"
 
-$ bash scripts/raeder/train_reader.sh \
+$ bash scripts/reader/train_reader.sh \
     -n $exp_name \
     -c $config_file \
     -t $train_file \
@@ -281,13 +281,13 @@ $ config_file="scripts/configs/reader_base.json"
 $ test_file="path/to/retrieved/test/file"
 $ model_file="path/to/reader/file"
 
-$ bash scripts/raeder/eval_reader.sh \
+$ bash scripts/reader/eval_reader.sh \
     -n $exp_name \
     -c $config_file \
     -e $test_file \
     -m $model_file
 
-$ ls $DIR_DPR/$exp_name/raeder/results/
+$ ls $DIR_DPR/$exp_name/reader/results/
     test_prediction_resuls.json         # test セットの評価結果の出力ディレクトリ
     eval_accuracy.txt                   # 正解率 (Exact Match) の出力ファイル
 ```
