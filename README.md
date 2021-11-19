@@ -277,13 +277,11 @@ $ ls $DIR_DPR/$exp_name/reader
 # 実行例
 
 $ exp_name="baseline"
-$ config_file="scripts/configs/reader_base.json"
 $ test_file="path/to/retrieved/test/file"
 $ model_file="path/to/reader/file"
 
 $ bash scripts/reader/eval_reader.sh \
     -n $exp_name \
-    -c $config_file \
     -e $test_file \
     -m $model_file
 
