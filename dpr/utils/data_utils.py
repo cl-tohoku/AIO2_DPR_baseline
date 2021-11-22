@@ -63,7 +63,7 @@ def read_data_from_json_files(paths: List[str], upsample_rates: List = None) -> 
 
 
 def read_qas(qa_file):
-    questions, question_answers = [], []
+    qids, questions, question_answers = [], [], []
     assert qa_file.endswith((
         '.csv', '.tsv', '.json', '.jsonl',
         '.csv.gz', '.tsv.gz', '.json.gz', '.jsonl.gz'
@@ -75,15 +75,17 @@ def read_qas(qa_file):
         elif qa_file.endswith(('.jsonl', '.jsonl.gz')):
             for line in fi:
                 line = json.loads(line.strip())
+                qids.append(line['qid'])
                 questions.append(line['question'])
                 question_answers.append(line['answers'])
         elif qa_file.endswith(('.json', '.json.gz')):
             for d in json.load(fi):
+                qids.append(d['qid'])
                 questions.append(d['question'])
                 question_answers.append(d['answers'])
         else:
             logger.warning('Cannot read qa_file')
-    return questions, question_answers
+    return qids, questions, question_answers
 
 def read_ctxs(ctxs_file, return_dict=False):
     rows = dict() if return_dict else []

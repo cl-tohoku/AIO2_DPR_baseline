@@ -54,7 +54,9 @@ console = logging.StreamHandler()
 logger.addHandler(console)
 """
 
-ReaderQuestionPredictions = collections.namedtuple('ReaderQuestionPredictions', ['id', 'predictions', 'gold_answers'])
+ReaderQuestionPredictions = collections.namedtuple(
+    'ReaderQuestionPredictions', ['qid', 'question', 'predictions', 'gold_answers']
+)
 
 class ReaderTrainer(object):
     def __init__(self, args):
@@ -414,7 +416,7 @@ class ReaderTrainer(object):
                     predictions = {passages_per_question: SpanPrediction('', -1, -1, -1, '')}
                 else:
                     predictions = {passages_per_question: nbest[0]}
-            batch_results.append(ReaderQuestionPredictions(sample.question, predictions, sample.answers))
+            batch_results.append(ReaderQuestionPredictions(sample.qid, sample.question, predictions, sample.answers))
         return batch_results
 
     def _calc_loss(self, input: ReaderBatch) -> torch.Tensor:
@@ -500,7 +502,8 @@ class ReaderTrainer(object):
             save_results = []
             for r in prediction_results:
                 save_results.append({
-                    'question': r.id,
+                    'qid': r.qid,
+                    'question': r.question,
                     'gold_answers': r.gold_answers,
                     'predictions': [{
                         'top_k': top_k,

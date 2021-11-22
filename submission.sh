@@ -30,4 +30,4 @@ python train_reader.py \
     --model_file $READER_FILE \
     --prediction_results_dir $READER_OUTPUT_DIR
 echo 'Formatting the prediction.'
-cat $READER_OUTPUT_DIR/test_prediction_results.json|jq '.[]|{question: .question, answer: .predictions[0].prediction.text}' > $OUTPUT_FILE
+cat $READER_OUTPUT_DIR/test_prediction_results.json|jq -c '.[]|{qid: .qid, question: .question, answer: .predictions[0].prediction.text}' > $OUTPUT_FILE

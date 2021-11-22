@@ -31,11 +31,11 @@ from torch import nn
 from dpr.data.qa_validation import calculate_matches
 from dpr.models import init_biencoder_components
 from dpr.options import (
-    add_encoder_params, 
-    setup_args_gpu, 
-    print_args, 
+    add_encoder_params,
+    setup_args_gpu,
+    print_args,
     set_encoder_params_from_state,
-    add_tokenizer_params, 
+    add_tokenizer_params,
     add_cuda_params
 )
 from dpr.utils.data_utils import (
@@ -44,13 +44,13 @@ from dpr.utils.data_utils import (
     read_ctxs
 )
 from dpr.utils.model_utils import (
-    setup_for_distributed_mode, 
-    get_model_obj, 
+    setup_for_distributed_mode,
+    get_model_obj,
     load_states_from_checkpoint
 )
 from dpr.indexer.faiss_indexers import (
-    DenseIndexer, 
-    DenseHNSWFlatIndexer, 
+    DenseIndexer,
+    DenseHNSWFlatIndexer,
     DenseFlatIndexer
 )
 
@@ -161,14 +161,14 @@ def validate(passages: Dict[object, Tuple[str, str]], answers: List[List[str]],
     return match_stats.questions_doc_hits
 
 
-def save_results(passages: Dict[object, Tuple[str, str]], questions: List[str], answers: List[List[str]],
-                 top_passages_and_scores: List[Tuple[List[object], List[float]]], per_question_hits: List[List[bool]],
-                 out_file: str
-                 ):
+def save_results(passages: Dict[object, Tuple[str, str]], qids: List[str], questions: List[str],
+                 answers: List[List[str]], top_passages_and_scores: List[Tuple[List[object], List[float]]],
+                 per_question_hits: List[List[bool]], out_file: str):
     # join passages text with the result ids, their questions and assigning has|no answer labels
     merged_data = []
-    assert len(per_question_hits) == len(questions) == len(answers)
+    assert len(per_question_hits) == len(qids) == len(questions) == len(answers)
     for i, q in enumerate(questions):
+        qid = qids[i]
         q_answers = answers[i]
         results_and_scores = top_passages_and_scores[i]
         hits = per_question_hits[i]
@@ -177,6 +177,7 @@ def save_results(passages: Dict[object, Tuple[str, str]], questions: List[str], 
         ctxs_num = len(hits)
 
         merged_data.append({
+            'qid': qid,
             'question': q,
             'answers': q_answers,
             'ctxs': [
@@ -289,7 +290,7 @@ def main():
             retriever.index.serialize(index_path)
 
     # get questions & answers
-    questions, question_answers = read_qas(args.qa_file)
+    qids, questions, question_answers = read_qas(args.qa_file)
     questions_tensor = retriever.generate_question_vectors(questions)
 
     # get top k results
@@ -305,7 +306,9 @@ def main():
                                   args.match, tokenizer, fo_acc=fo_acc)
 
     if args.out_file:
-        save_results(all_passages, questions, question_answers, top_ids_and_scores, questions_doc_hits, args.out_file)
+        save_results(
+            all_passages, qids, questions, question_answers, top_ids_and_scores, questions_doc_hits, args.out_file
+        )
 
 
 
