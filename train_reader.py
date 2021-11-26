@@ -192,7 +192,7 @@ class ReaderTrainer(object):
 
         return reader_validation_score
 
-    def validate(self, is_train: bool, is_test: bool, epoch: int):
+    def validate(self, is_train: bool, is_test: bool, epoch: int, no_logging_em: bool = False):
         logger.info('Validation ...')
         args = self.args
         self.reader.eval()
@@ -227,18 +227,20 @@ class ReaderTrainer(object):
             if (i + 1) % log_result_step == 0:
                 logger.info('Eval step: %d ', i)
 
-        ems = defaultdict(list)
+        if not no_logging_em:
+            # compute and log the EM (exact match) score
+            ems = defaultdict(list)
 
-        for q_predictions in all_results:
-            gold_answers = q_predictions.gold_answers
-            span_predictions = q_predictions.predictions  # {top docs threshold -> SpanPrediction()}
-            for (n, span_prediction) in span_predictions.items():
-                em_hit = max([exact_match_score(span_prediction.prediction_text, ga) for ga in gold_answers])
-                ems[n].append(em_hit)
-        em = 0
-        for n in sorted(ems.keys()):
-            em = np.mean(ems[n])
-            logger.info("n=%d\tEM %.2f" % (n, em * 100))
+            for q_predictions in all_results:
+                gold_answers = q_predictions.gold_answers
+                span_predictions = q_predictions.predictions  # {top docs threshold -> SpanPrediction()}
+                for (n, span_prediction) in span_predictions.items():
+                    em_hit = max([exact_match_score(span_prediction.prediction_text, ga) for ga in gold_answers])
+                    ems[n].append(em_hit)
+            em = 0
+            for n in sorted(ems.keys()):
+                em = np.mean(ems[n])
+                logger.info("n=%d\tEM %.2f" % (n, em * 100))
 
 
         if args.prediction_results_dir:
@@ -541,6 +543,8 @@ def main():
                         help="top retrival passages thresholds to analyze prediction results for")
     parser.add_argument('--checkpoint_file_name', type=str, default='dpr_reader')
     parser.add_argument('--prediction_results_dir', type=str)
+    parser.add_argument('--no_logging_em', action='store_true',
+                        help="Do not compute and log the EM (exact match) score when running validation.")
 
     # training parameters
     parser.add_argument("--eval_step", default=2000, type=int,
@@ -575,7 +579,7 @@ def main():
         trainer.run_train()
     elif args.dev_file:
         logger.info("No train files are specified. Run validation.")
-        trainer.validate(is_train=False, is_test=True, epoch=0)
+        trainer.validate(is_train=False, is_test=True, epoch=0, no_logging_em=args.no_logging_em)
     else:
         logger.warning("Neither train_file or (model_file & dev_file) parameters are specified. Nothing to do.")
 
