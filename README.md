@@ -54,24 +54,24 @@ $ bash scripts/download_data.sh <output_dir>
 |- wiki/
 |  |- jawiki-20210503-paragraphs.tsv.gz
 |- aio/
-|  |- abc_01-12.json.gz      # 訓練セット
-|  |- aio_01_dev.json.gz     # 開発セット
-|  |- aio_01_test.json.gz    # 評価セット
-|  |- aio_01_unused.json.gz
+|  |- abc_01-12_retriever.json.gz      # 訓練セット
+|  |- aio_01_dev_retriever.json.gz     # 開発セット
+|  |- aio_01_test_retriever.json.gz    # 評価セット
+|  |- aio_01_unused_retriever.json.gz
 
 # 「質問」と「正解」からなる TSV 形式のファイル
-|  |- abc_01-12.tsv      # 訓練セット
-|  |- aio_01_dev.tsv     # 開発セット
-|  |- aio_01_test.tsv    # 評価セット
-|  |- aio_01_unused.tsv
+|  |- abc_01-12_retriever.tsv      # 訓練セット
+|  |- aio_01_dev_retriever.tsv     # 開発セット
+|  |- aio_01_test_retriever.tsv    # 評価セット
+|  |- aio_01_unused_retriever.tsv
 ```
 
 |データ|ファイル名|質問数|文書数|
 |:---|:---|---:|---:|
-|訓練|abc_01-12|17,735|-|
-|開発|aio_01_dev|1,992|-|
-|評価|aio_01_test|2,000|-|
-|未使用|aio_01_unused|608|-|
+|訓練|abc\_01-12\_retriever|17,735|-|
+|開発|aio\_01\_dev\_retriever|1,992|-|
+|評価|aio\_01\_test\_retriever|2,000|-|
+|未使用|aio\_01\_unused\_retriever|608|-|
 |文書集合|jawiki-20210503-paragraphs|-|6,795,533|
 
 - データセットの構築方法の詳細については、[data/README.md](data/README.md)を参照して下さい。
