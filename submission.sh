@@ -29,6 +29,6 @@ python train_reader.py \
     --dev_file $RETRIEVER_OUTPUT_FILE \
     --model_file $READER_FILE \
     --prediction_results_dir $READER_OUTPUT_DIR \
-    --no_logging_em
+    --no_calc_em
 echo 'Formatting the prediction.'
 cat $READER_OUTPUT_DIR/test_prediction_results.json|jq -c '.[]|{qid: .qid, question: .question, prediction: .predictions[0].prediction.text}' > $OUTPUT_FILE

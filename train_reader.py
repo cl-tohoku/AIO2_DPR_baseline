@@ -179,6 +179,7 @@ class ReaderTrainer(object):
         # in distributed DDP mode, save checkpoint for only one process
         save_cp = args.local_rank in [-1, 0]
         reader_validation_score = self.validate(is_train=is_train, is_test=is_test, epoch=epoch)
+        assert reader_validation_score is not None
 
         if save_cp:
             if (epoch + 1) % args.num_save_epoch == 0:  # 指定epoch数毎に保存
@@ -192,7 +193,7 @@ class ReaderTrainer(object):
 
         return reader_validation_score
 
-    def validate(self, is_train: bool, is_test: bool, epoch: int, no_logging_em: bool = False):
+    def validate(self, is_train: bool, is_test: bool, epoch: int, no_calc_em: bool = False):
         logger.info('Validation ...')
         args = self.args
         self.reader.eval()
@@ -227,7 +228,9 @@ class ReaderTrainer(object):
             if (i + 1) % log_result_step == 0:
                 logger.info('Eval step: %d ', i)
 
-        if not no_logging_em:
+        if no_calc_em:
+            em = None
+        else:
             # compute and log the EM (exact match) score
             ems = defaultdict(list)
 
@@ -543,8 +546,8 @@ def main():
                         help="top retrival passages thresholds to analyze prediction results for")
     parser.add_argument('--checkpoint_file_name', type=str, default='dpr_reader')
     parser.add_argument('--prediction_results_dir', type=str)
-    parser.add_argument('--no_logging_em', action='store_true',
-                        help="Do not compute and log the EM (exact match) score when running validation.")
+    parser.add_argument('--no_calc_em', action='store_true',
+                        help="Do not calculate the EM (exact match) score when running validation.")
 
     # training parameters
     parser.add_argument("--eval_step", default=2000, type=int,
@@ -579,7 +582,7 @@ def main():
         trainer.run_train()
     elif args.dev_file:
         logger.info("No train files are specified. Run validation.")
-        trainer.validate(is_train=False, is_test=True, epoch=0, no_logging_em=args.no_logging_em)
+        trainer.validate(is_train=False, is_test=True, epoch=0, no_calc_em=args.no_calc_em)
     else:
         logger.warning("Neither train_file or (model_file & dev_file) parameters are specified. Nothing to do.")
 
