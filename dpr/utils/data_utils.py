@@ -77,12 +77,12 @@ def read_qas(qa_file):
                 line = json.loads(line.strip())
                 qids.append(line['qid'])
                 questions.append(line['question'])
-                question_answers.append(line['answers'])
+                question_answers.append(line.get('answers', []))  # test file does not contain `answers` key
         elif qa_file.endswith(('.json', '.json.gz')):
             for d in json.load(fi):
                 qids.append(d['qid'])
                 questions.append(d['question'])
-                question_answers.append(d['answers'])
+                question_answers.append(d.get('answers', []))  # test file does not contain `answers` key
         else:
             logger.warning('Cannot read qa_file')
     return qids, questions, question_answers
