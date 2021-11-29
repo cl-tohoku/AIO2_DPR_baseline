@@ -63,10 +63,11 @@ class ReaderSample(object):
         Container to collect all Q&A passages data per singe question
     """
 
-    def __init__(self, question: str, answers: List, positive_passages: List[ReaderPassage] = [],
+    def __init__(self, qid: str, question: str, answers: List, positive_passages: List[ReaderPassage] = [],
                  negative_passages: List[ReaderPassage] = [],
                  passages: List[ReaderPassage] = [],
                  ):
+        self.qid = qid
         self.question = question
         self.answers = answers
         self.positive_passages = positive_passages
@@ -136,6 +137,7 @@ def preprocess_retriever_data(samples: List[Dict], gold_info_file: Optional[str]
         return sample
 
     for sample in samples:
+        qid = sample['qid']
         question = sample['question']
 
         if question in canonical_questions:
@@ -164,10 +166,10 @@ def preprocess_retriever_data(samples: List[Dict], gold_info_file: Optional[str]
             positives_from_gold += 1
 
         if is_train_set:
-            yield ReaderSample(question, sample['answers'], positive_passages=positive_passages,
+            yield ReaderSample(qid, question, sample['answers'], positive_passages=positive_passages,
                                negative_passages=negative_passages)
         else:
-            yield ReaderSample(question, sample['answers'], passages=negative_passages)
+            yield ReaderSample(qid, question, sample['answers'], passages=negative_passages)
 
     logger.info('no positive passages samples: %d', no_positive_passages)
     logger.info('positive passages from gold samples: %d', positives_from_gold)
@@ -195,6 +197,7 @@ def convert_retriever_results(is_train_set: bool, input_file: str, out_file_pref
         samples = json.loads("".join(f.readlines()))
         """ samples[0] : List[dict]
         {
+            'qid': str,
             'question': str,
             'answers': List[str],
             'ctxs': [
@@ -439,4 +442,3 @@ def _preprocess_reader_samples_chunk(samples: List, out_file_prefix: str, gold_p
         logger.info('Serialize %d results to %s', len(results), out_file)
         pickle.dump(results, f)
     return out_file
-
