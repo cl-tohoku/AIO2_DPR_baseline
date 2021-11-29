@@ -24,7 +24,7 @@ import time
 from typing import Tuple, List
 
 import numpy as np
-
+import transformers
 import torch
 from torch import nn
 from torch import Tensor as T
@@ -70,6 +70,7 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+transformers.logging.set_verbosity_warning()
 
 
 class BiEncoderTrainer(object):
