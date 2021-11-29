@@ -1,0 +1,10 @@
+mecab-python3
+tqdm
+rank_bm25
+transformers[ja]
+spacy
+faiss-cpu
+pandas
+tensorboard
+memory-profiler
+matplotlib

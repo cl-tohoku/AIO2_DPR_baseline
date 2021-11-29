@@ -13,20 +13,21 @@ import logging
 from typing import Tuple
 
 import torch
+import transformers
 from torch import Tensor as T
 from torch import nn
-from transformers.modeling_bert import BertConfig, BertModel
-from transformers.optimization import AdamW
-from transformers.tokenization_bert import BertTokenizer
+from transformers import BertConfig, BertModel
+from transformers import AdamW
+from transformers import BertTokenizer
 from transformers import BertJapaneseTokenizer
-from transformers.tokenization_roberta import RobertaTokenizer
+from transformers import RobertaTokenizer
+
 
 from dpr.utils.data_utils import Tensorizer
 from .biencoder import BiEncoder
 from .reader import Reader
 
 logger = logging.getLogger(__name__)
-
 
 def get_bert_biencoder_components(args, inference_only: bool = False, **kwargs):
     dropout = args.dropout if hasattr(args, 'dropout') else 0.0
@@ -103,7 +104,6 @@ def get_roberta_tokenizer(pretrained_cfg_name: str, do_lower_case: bool = True):
 
 
 class HFBertEncoder(BertModel):
-
     def __init__(self, config, project_dim: int = 0):
         BertModel.__init__(self, config)
         assert config.hidden_size > 0, 'Encoder hidden_size can\'t be zero'
@@ -118,15 +118,27 @@ class HFBertEncoder(BertModel):
             cfg.hidden_dropout_prob = dropout
         return cls.from_pretrained(cfg_name, config=cfg, project_dim=projection_dim, **kwargs)
 
-    def forward(self, input_ids: T, token_type_ids: T, attention_mask: T) -> Tuple[T, ...]:
-        if self.config.output_hidden_states:
-            sequence_output, pooled_output, hidden_states = super().forward(input_ids=input_ids,
-                                                                            token_type_ids=token_type_ids,
-                                                                            attention_mask=attention_mask)
+    def forward(self, input_ids: T, token_type_ids: T, attention_mask: T, ) -> Tuple[T, ...]:
+        """ transformer のバージョンで分岐 """
+        if transformers.__version__.startswith('4'):
+            if self.config.output_hidden_states:
+                sequence_output, pooled_output, hidden_states = super().forward(input_ids=input_ids,
+                                                                                token_type_ids=token_type_ids,
+                                                                                attention_mask=attention_mask,
+                                                                                return_dict=False)
+            else:
+                hidden_states = None
+                sequence_output, pooled_output = super().forward(input_ids=input_ids, token_type_ids=token_type_ids,
+                                                                 attention_mask=attention_mask, return_dict=False)
         else:
-            hidden_states = None
-            sequence_output, pooled_output = super().forward(input_ids=input_ids, token_type_ids=token_type_ids,
-                                                             attention_mask=attention_mask)
+            if self.config.output_hidden_states:
+                sequence_output, pooled_output, hidden_states = super().forward(input_ids=input_ids,
+                                                                                token_type_ids=token_type_ids,
+                                                                                attention_mask=attention_mask)
+            else:
+                hidden_states = None
+                sequence_output, pooled_output = super().forward(input_ids=input_ids, token_type_ids=token_type_ids,
+                                                                 attention_mask=attention_mask)
 
         pooled_output = sequence_output[:, 0, :]
         if self.encode_proj:
@@ -155,7 +167,7 @@ class BertTensorizer(Tensorizer):
                                               max_length=self.max_length, truncation=self.truncation,
                                               pad_to_max_length=False)
         else:
-            token_ids = self.tokenizer.encode(text, add_special_tokens=add_special_tokens, 
+            token_ids = self.tokenizer.encode(text, add_special_tokens=add_special_tokens,
                                               max_length=self.max_length, truncation=self.truncation,
                                               pad_to_max_length=False)
 
