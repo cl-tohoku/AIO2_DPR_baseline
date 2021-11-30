@@ -162,6 +162,7 @@ class BertTensorizer(Tensorizer):
         text = text.strip()
 
         # tokenizer automatic padding is explicitly disabled since its inconsistent behavior
+        transformers.logging.set_verbosity_error()
         if title:
             token_ids = self.tokenizer.encode(title, text_pair=text, add_special_tokens=add_special_tokens,
                                               max_length=self.max_length, truncation=self.truncation,
@@ -170,6 +171,7 @@ class BertTensorizer(Tensorizer):
             token_ids = self.tokenizer.encode(text, add_special_tokens=add_special_tokens,
                                               max_length=self.max_length, truncation=self.truncation,
                                               pad_to_max_length=False)
+        transformers.logging.set_verbosity_warning()
 
         seq_len = self.max_length
         if self.pad_to_max and len(token_ids) < seq_len:

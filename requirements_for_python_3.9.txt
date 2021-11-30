@@ -1,10 +1,9 @@
 mecab-python3==1.0.4
-tqdm
+tqdm==4.62.3
 rank_bm25==0.2.1
 transformers[ja]==4.12.5
 spacy== 3.2.0
 faiss-cpu== 1.7.1.post2
 pandas==1.3.4
 tensorboard==2.7.0
-memory-profiler==0.58.0
 matplotlib==3.5.0
