@@ -9,19 +9,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install requirements
 RUN pip install --no-cache-dir \
-        "mecab-python3==1.0.4" \
-        "pandas==1.3.4" \
-        "tqdm==4.62.3" \
+        "mecab-python3==0.996.5" \
+        "pandas==1.1.4" \
+        "tqdm" \
         "rank_bm25==0.2.1" \
-        "transformers==4.12.5" \
-        "spacy==3.2.0" \
-        "faiss-cpu==1.7.1.post2" \
-        "tensorboard==2.7.0" \
+        "transformers==2.11.0" \
+        "spacy==2.3.2" \
+        "faiss-cpu==1.6.3" \
+        "tensorboard==2.3.0" \
         "torch==1.9.1"
 
 # Download transformers models in advance
 ARG TRANSFORMERS_BASE_MODEL_NAME="cl-tohoku/bert-base-japanese-whole-word-masking"
-RUN python -c "from transformers import BertModel; BertModel.from_pretrained('${TRANSFORMERS_BASE_MODEL_NAME}')"
+RUN python -c "from transformers.modeling_bert import BertModel; BertModel.from_pretrained('${TRANSFORMERS_BASE_MODEL_NAME}')"
 RUN python -c "from transformers import BertJapaneseTokenizer; BertJapaneseTokenizer.from_pretrained('${TRANSFORMERS_BASE_MODEL_NAME}')"
 ENV TRANSFORMERS_OFFLINE=1
 
