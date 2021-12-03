@@ -54,7 +54,9 @@ console = logging.StreamHandler()
 logger.addHandler(console)
 """
 
-ReaderQuestionPredictions = collections.namedtuple('ReaderQuestionPredictions', ['id', 'predictions', 'gold_answers'])
+ReaderQuestionPredictions = collections.namedtuple(
+    'ReaderQuestionPredictions', ['qid', 'question', 'predictions', 'gold_answers']
+)
 
 class ReaderTrainer(object):
     def __init__(self, args):
@@ -177,6 +179,7 @@ class ReaderTrainer(object):
         # in distributed DDP mode, save checkpoint for only one process
         save_cp = args.local_rank in [-1, 0]
         reader_validation_score = self.validate(is_train=is_train, is_test=is_test, epoch=epoch)
+        assert reader_validation_score is not None
 
         if save_cp:
             if (epoch + 1) % args.num_save_epoch == 0:  # 指定epoch数毎に保存
@@ -190,7 +193,7 @@ class ReaderTrainer(object):
 
         return reader_validation_score
 
-    def validate(self, is_train: bool, is_test: bool, epoch: int):
+    def validate(self, is_train: bool, is_test: bool, epoch: int, no_calc_em: bool = False):
         logger.info('Validation ...')
         args = self.args
         self.reader.eval()
@@ -225,18 +228,22 @@ class ReaderTrainer(object):
             if (i + 1) % log_result_step == 0:
                 logger.info('Eval step: %d ', i)
 
-        ems = defaultdict(list)
+        if no_calc_em:
+            em = None
+        else:
+            # compute and log the EM (exact match) score
+            ems = defaultdict(list)
 
-        for q_predictions in all_results:
-            gold_answers = q_predictions.gold_answers
-            span_predictions = q_predictions.predictions  # {top docs threshold -> SpanPrediction()}
-            for (n, span_prediction) in span_predictions.items():
-                em_hit = max([exact_match_score(span_prediction.prediction_text, ga) for ga in gold_answers])
-                ems[n].append(em_hit)
-        em = 0
-        for n in sorted(ems.keys()):
-            em = np.mean(ems[n])
-            logger.info("n=%d\tEM %.2f" % (n, em * 100))
+            for q_predictions in all_results:
+                gold_answers = q_predictions.gold_answers
+                span_predictions = q_predictions.predictions  # {top docs threshold -> SpanPrediction()}
+                for (n, span_prediction) in span_predictions.items():
+                    em_hit = max([exact_match_score(span_prediction.prediction_text, ga) for ga in gold_answers])
+                    ems[n].append(em_hit)
+            em = 0
+            for n in sorted(ems.keys()):
+                em = np.mean(ems[n])
+                logger.info("n=%d\tEM %.2f" % (n, em * 100))
 
 
         if args.prediction_results_dir:
@@ -414,7 +421,7 @@ class ReaderTrainer(object):
                     predictions = {passages_per_question: SpanPrediction('', -1, -1, -1, '')}
                 else:
                     predictions = {passages_per_question: nbest[0]}
-            batch_results.append(ReaderQuestionPredictions(sample.question, predictions, sample.answers))
+            batch_results.append(ReaderQuestionPredictions(sample.qid, sample.question, predictions, sample.answers))
         return batch_results
 
     def _calc_loss(self, input: ReaderBatch) -> torch.Tensor:
@@ -502,7 +509,8 @@ class ReaderTrainer(object):
             save_results = []
             for r in prediction_results:
                 save_results.append({
-                    'question': r.id,
+                    'qid': r.qid,
+                    'question': r.question,
                     'gold_answers': r.gold_answers,
                     'predictions': [{
                         'top_k': top_k,
@@ -540,6 +548,8 @@ def main():
                         help="top retrival passages thresholds to analyze prediction results for")
     parser.add_argument('--checkpoint_file_name', type=str, default='dpr_reader')
     parser.add_argument('--prediction_results_dir', type=str)
+    parser.add_argument('--no_calc_em', action='store_true',
+                        help="Do not calculate the EM (exact match) score when running validation.")
 
     # training parameters
     parser.add_argument("--eval_step", default=2000, type=int,
@@ -574,7 +584,7 @@ def main():
         trainer.run_train()
     elif args.dev_file:
         logger.info("No train files are specified. Run validation.")
-        trainer.validate(is_train=False, is_test=True, epoch=0)
+        trainer.validate(is_train=False, is_test=True, epoch=0, no_calc_em=args.no_calc_em)
     else:
         logger.warning("Neither train_file or (model_file & dev_file) parameters are specified. Nothing to do.")
 
