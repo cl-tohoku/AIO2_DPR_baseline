@@ -14,7 +14,6 @@ RUN pip install --no-cache-dir \
         "tqdm==4.62.3" \
         "rank_bm25==0.2.1" \
         "transformers[ja]==4.12.5" \
-        "spacy==3.2.0" \
         "faiss-cpu==1.7.1.post2" \
         "tensorboard==2.7.0" \
         "torch==1.9.1"
