@@ -147,7 +147,7 @@ id      text    title
 $ save_dir="model"
 $ targets="retriever,reader,embeddings"  # {retriever, reader, embeddings} からダウンロード対象を「スペースなしの ',' 区切り」で指定して下さい
 
-$ bash scripts/download_model $targets $save_dir
+$ bash scripts/download_model.sh $targets $save_dir
 $ du -h ${save_dir}/*
   2.2G    biencoder.pt.gz
   1.1G    reader.pt.gz
