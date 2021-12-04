@@ -11,7 +11,8 @@
     - ダウンロード
     - 学習データ
     - 文書集合（Wikipedia）
-- [Dense Passage Retrieval](#dense-passage-retrieval)
+- [Dense Passage Retrieval](#dense-opassage-retrieval)
+    - ダウンロード
     - 設定
     - Retriever
         - 1. BiEncoder の学習
@@ -136,6 +137,22 @@ id      text    title
 より詳細な解説は、以下を参照して下さい。
 
 > Karpukhin, Vladimir and Oguz, Barlas and Min, Sewon and Lewis, Patrick and Wu, Ledell and Edunov, Sergey and Chen, Danqi and Yih, Wen-tau. Dense Passage Retrieval for Open-Domain Question Answering (EMNLP2020) [\[paper\]](https://www.aclweb.org/anthology/2020.emnlp-main.550) [\[github\]](https://github.com/facebookresearch/DPR)
+
+### ダウンロード
+本節以降では Retriever と Reader の学習手順、および Retriever による文書エンベッディングの作成と関連文書検索方法について紹介します。
+本節は以降の手順で作成された、Retriever、Reader、文書エンベッディングのダウンロード方法について説明します。
+必要に応じてダウンロードして下さい。
+
+```bash
+$ save_dir="model"
+$ targets="retriever,reader,embeddings"  # {retriever, reader, embeddings} からダウンロード対象を「スペースなしの ',' 区切り」で指定して下さい
+
+$ bash scripts/download_model $targets $save_dir
+$ du -h ${save_dir}/*
+  2.2G    biencoder.pt.gz
+  1.1G    reader.pt.gz
+  18.0G   embedding.pickle.gz
+```
 
 ### 設定
 
