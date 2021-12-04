@@ -11,7 +11,7 @@
     - ダウンロード
     - 学習データ
     - 文書集合（Wikipedia）
-- [Dense Passage Retrieval](#dense-opassage-retrieval)
+- [Dense Passage Retrieval](#dense-passage-retrieval)
     - ダウンロード
     - 設定
     - Retriever
