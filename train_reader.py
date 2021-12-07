@@ -106,6 +106,11 @@ class ReaderTrainer(object):
 
         # apply deserialization hook
         iterator.apply(lambda sample: sample.on_deserialize())
+
+        """キャッシュを削除"""
+        for file in preprocessed_data_files:
+            os.remove(file)
+
         return iterator
 
     def run_train(self):
@@ -453,9 +458,11 @@ class ReaderTrainer(object):
 
     def _get_preprocessed_files(self, data_files: List, is_train: bool, ):
 
+        """
         serialized_files = [file for file in data_files if file.endswith('.pkl')]
         if serialized_files:
             return serialized_files
+        """
         assert len(data_files) == 1, 'Only 1 source file pre-processing is supported.'
 
         # data may have been serialized and cached before, try to find ones from same dir
@@ -469,9 +476,12 @@ class ReaderTrainer(object):
             return glob.glob(out_file_pattern), out_file_prefix
 
         serialized_files, out_file_prefix = _find_cached_files(data_files[0])
+
+        """
         if serialized_files:
             logger.info('Found preprocessed files. %s', serialized_files)
             return serialized_files
+        """
 
         gold_passages_src = None
         if self.args.gold_passages_src:
