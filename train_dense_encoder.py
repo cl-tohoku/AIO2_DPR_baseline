@@ -513,9 +513,17 @@ class BiEncoderTrainer(object):
 def _calc_loss(args, loss_function, local_q_vector, local_ctx_vectors, local_positive_idxs,
                local_hard_negatives_idxs: list = None,
                ) -> Tuple[T, bool]:
-    """
-    Calculates In-batch negatives schema loss and supports to run it in DDP mode by exchanging the representations
-    across all the nodes.
+    """ Calculates In-batch negatives schema loss and supports to run it in DDP mode by exchanging the representations across all the nodes.
+    # glossary
+        - local*  : mini-batch units
+        - global* : aggregation units of distributed mini-batch (local == global if args.distributed_world_size == 1)
+    # NOTE: In this function, calculate the loss per batch size. The following paper can be useful to understand more deeply
+        - https://arxiv.org/abs/2010.08191
+    =====
+    :param local_q_vector: TensorType['q_num': batch, 'hidden_size']
+    :param local_ctx_vectors: TensorType['ctx_num': batch*n_ctxs_per_q, 'hidden_size']
+    :param local_positive_idxs: list of positive_idxs (len == q_num)
+    :param local_hard_negatives_idxs: not currently in use, see dpr/models/biencoder.py
     """
     distributed_world_size = args.distributed_world_size or 1
     if distributed_world_size > 1:

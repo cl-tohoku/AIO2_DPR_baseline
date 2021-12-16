@@ -7,6 +7,7 @@
 
 """
  FAISS-based index components for dense retriver
+ - https://github.com/facebookresearch/faiss/wiki
 """
 
 import os
@@ -19,6 +20,13 @@ import numpy as np
 
 logger = logging.getLogger()
 
+Vector = np.array
+DataID = object                      # data id to be registered with faiss indexer
+Score = float                        # value of vector operation (inner product if IP)
+DataIDs = List[DataID]               # len(DataIDs) == top-k if search top-k
+Scores = List[Score]                 # len(Scores) == top-k if search top-k
+Res4Query = Tuple[DataIDs, Scores]   # search results for a query
+
 
 class DenseIndexer(object):
 
@@ -27,13 +35,16 @@ class DenseIndexer(object):
         self.index_id_to_db_id = []
         self.index = None
 
-    def index_data(self, data: List[Tuple[object, np.array]]):
+    def index_data(self, data: List[Tuple[DataID, Vector]]):
+        """ register data into faiss index """
         raise NotImplementedError
 
-    def search_knn(self, query_vectors: np.array, top_docs: int) -> List[Tuple[List[object], List[float]]]:
+    def search_knn(self, query_vectors: Vector, top_docs: int) -> List[Res4Query]:
+        """ search index corresponding to the query """
         raise NotImplementedError
 
     def serialize(self, file: str):
+        """ dump index in pickle format """
         logger.info('Serializing index to %s', file)
 
         if os.path.isdir(file):
@@ -48,6 +59,7 @@ class DenseIndexer(object):
             pickle.dump(self.index_id_to_db_id, f)
 
     def deserialize_from(self, file: str):
+        """ load index from pickle file """
         logger.info('Loading index from %s', file)
 
         if os.path.isdir(file):
@@ -75,7 +87,7 @@ class DenseFlatIndexer(DenseIndexer):
         super(DenseFlatIndexer, self).__init__(buffer_size=buffer_size)
         self.index = faiss.IndexFlatIP(vector_sz)
 
-    def index_data(self, data: List[Tuple[object, np.array]]):
+    def index_data(self, data: List[Tuple[DataID, Vector]]):
         n = len(data)
         # indexing in batches is beneficial for many faiss index types
         for i in range(0, n, self.buffer_size):
@@ -88,7 +100,7 @@ class DenseFlatIndexer(DenseIndexer):
         indexed_cnt = len(self.index_id_to_db_id)
         logger.info('Total data indexed %d', indexed_cnt)
 
-    def search_knn(self, query_vectors: np.array, top_docs: int) -> List[Tuple[List[object], List[float]]]:
+    def search_knn(self, query_vectors: Vector, top_docs: int) -> List[Res4Query]:
         scores, indexes = self.index.search(query_vectors, top_docs)
         # convert to external ids
         db_ids = [[self.index_id_to_db_id[i] for i in query_top_idxs] for query_top_idxs in indexes]
@@ -113,7 +125,7 @@ class DenseHNSWFlatIndexer(DenseIndexer):
         self.index = index
         self.phi = 0
 
-    def index_data(self, data: List[Tuple[object, np.array]]):
+    def index_data(self, data: List[Tuple[DataID, Vector]]):
         n = len(data)
 
         # max norm is required before putting all vectors in the index to convert inner product similarity to L2
@@ -146,7 +158,7 @@ class DenseHNSWFlatIndexer(DenseIndexer):
         indexed_cnt = len(self.index_id_to_db_id)
         logger.info('Total data indexed %d', indexed_cnt)
 
-    def search_knn(self, query_vectors: np.array, top_docs: int) -> List[Tuple[List[object], List[float]]]:
+    def search_knn(self, query_vectors: Vector, top_docs: int) -> List[Res4Query]:
 
         aux_dim = np.zeros(len(query_vectors), dtype='float32')
         query_nhsw_vectors = np.hstack((query_vectors, aux_dim.reshape(-1, 1)))
