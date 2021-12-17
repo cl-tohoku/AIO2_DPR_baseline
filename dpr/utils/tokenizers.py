@@ -191,15 +191,15 @@ class SimpleTokenizer(Tokenizer):
             ))
         return Tokens(data, self.annotators)
 
-
+"""
 class SpacyTokenizer(Tokenizer):
 
     def __init__(self, **kwargs):
-        """
+        
         Args:
             annotators: set that can include pos, lemma, and ner.
             model: spaCy model to use (either path, or keyword like 'en').
-        """
+        
         model = kwargs.get('model', 'en')
         self.annotators = copy.deepcopy(kwargs.get('annotators', set()))
         nlp_kwargs = {'parser': False}
@@ -238,3 +238,4 @@ class SpacyTokenizer(Tokenizer):
 
         # Set special option for non-entity tag: '' vs 'O' in spaCy
         return Tokens(data, self.annotators, opts={'non_ent': ''})
+"""
