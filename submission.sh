@@ -24,7 +24,7 @@ python dense_retriever.py \
     --batch_size 64 \
     --projection_dim 768
 echo 'Reading the retrieved passages.'
-mkdir $READER_OUTPUT_DIR
+mkdir -p $READER_OUTPUT_DIR
 python train_reader.py \
     --dev_file $RETRIEVER_OUTPUT_FILE \
     --model_file $READER_FILE \
