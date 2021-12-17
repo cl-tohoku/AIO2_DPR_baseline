@@ -142,6 +142,7 @@ id      text    title
 本節以降では Retriever と Reader の学習手順、および Retriever による文書エンベッディングの作成と関連文書検索方法について紹介します。
 本節は以降の手順で作成された、Retriever、Reader、文書エンベッディングのダウンロード方法について説明します。
 必要に応じてダウンロードして下さい。
+<br>
 (注)作成済みのRetriever、Reader、文書エンベッディングを使用する場合は、transforemrs==2.11.0のバージョンで動かして下さい。
 ```bash
 $ save_dir="model"
