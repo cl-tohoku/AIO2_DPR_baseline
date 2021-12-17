@@ -14,7 +14,6 @@ import copy
 import logging
 
 import regex
-import spacy
 
 logger = logging.getLogger(__name__)
 
