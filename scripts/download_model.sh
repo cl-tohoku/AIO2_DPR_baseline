@@ -21,13 +21,13 @@ fi
 for target in ${TARGETS[@]} ; do
   if [ $target = "retriever" ] ; then
     echo "- Download: retriever"
-    wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/model/biencoder.pt.gz -P $DEST
+    wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/model_hf_v4.12.5/biencoder.pt.gz -P $DEST
   elif [ $target = "reader" ] ; then
     echo "- Download: reader"
-    wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/model/reader.pt.gz -P $DEST
+    wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/model_hf_v4.12.5/reader.pt.gz -P $DEST
   elif [ $target = "embeddings" ] ; then
     echo "- Download: embeddings"
-    wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/model/biencoder.pt.gz -P $DEST
+    wget -nc https://jaqket.s3.ap-northeast-1.amazonaws.com/data/aio_02/model_hf_v4.12.5/embedding.pickle.gz -P $DEST
   else
     echo "[WARNING] '${target}' is not appropriate"
     echo "[WARNING] Please specify the target from {retriever, reader, embeddings}"
