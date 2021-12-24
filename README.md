@@ -3,6 +3,10 @@
 - [AI王 〜クイズAI日本一決定戦〜](https://www.nlp.ecei.tohoku.ac.jp/projects/aio/)
 - 昨年度の概要は [こちら](https://sites.google.com/view/nlp2021-aio/)
 
+## 更新履歴
+- 2021/12/24: ベースラインのtransformerのバージョンを2.11.0から4.12.5に更新しました。それに伴い、ベースラインのスコア、及び[./download_model.sh](./download_model.sh)でダウンロードできるモデルを更新しています。
+
+
 ## 目次
 以下に記した実行手順の一連の流れについては、[./do_example_run.sh](./do_example_run.sh) に記載していますので、こちらもご確認下さい。
 
@@ -142,7 +146,8 @@ id      text    title
 本節以降では Retriever と Reader の学習手順、および Retriever による文書エンベッディングの作成と関連文書検索方法について紹介します。
 本節は以降の手順で作成された、Retriever、Reader、文書エンベッディングのダウンロード方法について説明します。
 必要に応じてダウンロードして下さい。
-2021/12/24 更新：訓練済みモデルのtransformerのバージョンを、2.11.0から4.12.5に変更しました。少なくとも第2回のベースラインとしては，このバージョンで固定します。
+<br>
+**2021/12/24 更新**：transformerのバージョンが2.11.0から4.12.5のものに訓練済みモデルを置き換えました。少なくとも第2回のベースラインとしてはこのバージョンで固定します。
 ```bash
 $ save_dir="model"
 $ targets="retriever,reader,embeddings"  # {retriever, reader, embeddings} からダウンロード対象を「スペースなしの ',' 区切り」で指定して下さい
