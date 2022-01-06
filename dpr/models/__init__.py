@@ -13,6 +13,7 @@ import importlib
 
 
 def init_hf_bert_biencoder(args, **kwargs):
+    """ biencoder with huggingface """
     if importlib.util.find_spec("transformers") is None:
         raise RuntimeError('Please install transformers lib')
     from .hf_models import get_bert_biencoder_components
@@ -20,6 +21,7 @@ def init_hf_bert_biencoder(args, **kwargs):
 
 
 def init_hf_bert_reader(args, **kwargs):
+    """ reader with huggingface """
     if importlib.util.find_spec("transformers") is None:
         raise RuntimeError('Please install transformers lib')
     from .hf_models import get_bert_reader_components
@@ -27,6 +29,7 @@ def init_hf_bert_reader(args, **kwargs):
 
 
 def init_pytext_bert_biencoder(args, **kwargs):
+    """ biencoder with pytext """
     if importlib.util.find_spec("pytext") is None:
         raise RuntimeError('Please install pytext lib')
     from .pytext_models import get_bert_biencoder_components
@@ -34,6 +37,7 @@ def init_pytext_bert_biencoder(args, **kwargs):
 
 
 def init_fairseq_roberta_biencoder(args, **kwargs):
+    """ biencoder with fairseq """
     if importlib.util.find_spec("fairseq") is None:
         raise RuntimeError('Please install fairseq lib')
     from .fairseq_models import get_roberta_biencoder_components
@@ -41,6 +45,7 @@ def init_fairseq_roberta_biencoder(args, **kwargs):
 
 
 def init_hf_bert_tenzorizer(args, **kwargs):
+    """ BertTokenizer with huggingface """
     if importlib.util.find_spec("transformers") is None:
         raise RuntimeError('Please install transformers lib')
     from .hf_models import get_bert_tensorizer
@@ -48,6 +53,7 @@ def init_hf_bert_tenzorizer(args, **kwargs):
 
 
 def init_hf_roberta_tenzorizer(args, **kwargs):
+    """ RobertaTokenizer with huggingface"""
     if importlib.util.find_spec("transformers") is None:
         raise RuntimeError('Please install transformers lib')
     from .hf_models import get_roberta_tensorizer
