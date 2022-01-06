@@ -75,6 +75,11 @@ class DenseRetriever(object):
         self.index = index
 
     def generate_question_vectors(self, questions: List[str]) -> T:
+        """
+        Convert questions into vectors
+        :param questions: list name of questions
+        :return:tensor of query
+        """
         n = len(questions)
         bsz = self.batch_size
         query_vectors = []
@@ -121,12 +126,12 @@ class DenseRetriever(object):
         self.index.index_data(buffer)
         logger.info('Data indexing completed.')
 
-    def get_top_docs(self, query_vectors: np.array, top_docs: int = 100) -> List[Tuple[List[object], List[float]]]:
+    def get_top_docs(self, query_vectors: np.array, top_docs: int = 100) -> List[Tuple[List[object], List[float]]] :
         """
         Does the retrieval of the best matching passages given the query vectors batch
-        :param query_vectors:
-        :param top_docs:
-        :return:
+        :param query_vectors: questions tensor converted into numpy array
+        :param top_docs: number of K
+        :return: list which contains results of K nearest neighbor (KNN) search
         """
         time0 = time.time()
         results = self.index.search_knn(query_vectors, top_docs)
@@ -135,6 +140,11 @@ class DenseRetriever(object):
 
 
 def parse_qa_csv_file(location) -> Iterator[Tuple[str, List[str]]]:
+    """
+    Get question and answers from csv file
+    :param location: location of a csv file
+    :return:
+    """
     with open(location) as ifile:
         reader = csv.reader(ifile, delimiter='\t')
         for row in reader:
@@ -146,6 +156,16 @@ def parse_qa_csv_file(location) -> Iterator[Tuple[str, List[str]]]:
 def validate(passages: Dict[object, Tuple[str, str]], answers: List[List[str]],
              result_ctx_ids: List[Tuple[List[object], List[float]]],
              workers_num: int, match_type: str, tokenizer, fo_acc:str=None) -> List[List[bool]]:
+    """
+    Evaluates answers presence and generates csv file to write validation results.
+    :param passages: dict imported from ctx_file
+    :param answers: answers imported from question and answers file
+    :param result_ctx_ids: results of KNN search
+    :param workers_num: number of parallel processes to validate results
+    :param match_type: answer matching logic type
+    :param fo_acc: file name to out put  validation results
+    :return: list contains info about if they have any of the answers
+    """
     match_stats = calculate_matches(passages, answers, result_ctx_ids, workers_num, match_type, tokenizer)
     top_k_hits = match_stats.top_k_hits
     top_k_acc = [round(v/len(result_ctx_ids), 4) for v in top_k_hits]
@@ -164,7 +184,17 @@ def validate(passages: Dict[object, Tuple[str, str]], answers: List[List[str]],
 def save_results(passages: Dict[object, Tuple[str, str]], qids: List[str], questions: List[str],
                  answers: List[List[str]], top_passages_and_scores: List[Tuple[List[object], List[float]]],
                  per_question_hits: List[List[bool]], out_file: str):
-    # join passages text with the result ids, their questions and assigning has|no answer labels
+    """
+    Join passages text with the result ids, their questions and assigning has|no answer labels
+    :param passages: dict imported from ctx_file
+    :param qids: question id imported from question and answers file
+    :param questions: questions imported from question and answers file
+    :param answers: answers imported from question and answers file
+    :param top_passages_and_scores: results of K nearest neighbor (KNN) search
+    :param per_question_hits: list contains info about if they have any of the answers
+    :param out_file: file name to save results
+    :return:
+    """
     merged_data = []
     assert len(per_question_hits) == len(qids) == len(questions) == len(answers)
     for i, q in enumerate(questions):
@@ -197,6 +227,11 @@ def save_results(passages: Dict[object, Tuple[str, str]], qids: List[str], quest
 
 
 def iterate_encoded_files(vector_files: list) -> Iterator[Tuple[object, np.array]]:
+    """
+    Get database id and numpy array of document vectors
+    :param vector_files: file names to get passages vectors from
+    :return:
+    """
     for i, file in enumerate(vector_files):
         logger.info('Reading file %s', file)
         with open(file, "rb") as reader:
