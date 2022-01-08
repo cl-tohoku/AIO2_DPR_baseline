@@ -70,6 +70,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+torch.device("cuda", index=1)
 
 class BiEncoderTrainer(object):
     """
@@ -109,12 +110,26 @@ class BiEncoderTrainer(object):
         self.model_id = self.get_model_id()
 
     def get_model_id(self, **kwargs) -> str:
+        """
+        :param **kwargs:
+        :return strings about model id
+        """
         date = datetime.today().strftime("%Y%m%d-%H%M")
         misc = '_'.join([f'{k}{v}' for k, v in kwargs.items()])
         return f'{date}_{misc}'
 
     def get_data_iterator(self, path: str, batch_size: int, shuffle: bool = True, shuffle_seed: int = 0,
                           offset: int = 0, upsample_rates: list = None) -> ShardedDataIterator:
+        """
+        Get ShardedDataIterator class object from input data
+        :param path: input file path
+        :param batch_size:
+        :param shuffle:
+        :param shuffle_seed:
+        :param offset:
+        :param upsample_rates:
+        :return ShardedDataIterator class object
+        """
         data_files = glob.glob(path)
         data = read_data_from_json_files(data_files, upsample_rates)
         data = [r for r in data if len(r['positive_ctxs']) > 0]  # filter those without positive ctx
@@ -187,7 +202,16 @@ class BiEncoderTrainer(object):
                 writer.add_scalar(f'Av.Rank/valid', epoch_score['valid_ave_rank'], epoch)
         logger.info(f'Write tensorboard log file @ {dest}')
 
-    def validate_and_save(self, epoch: int, iteration: int, scheduler, eval_iterator=None, do_save=True):
+    def validate_and_save(self, epoch: int, iteration: int, scheduler, eval_iterator=None, do_save=True) -> float:
+        """
+        Validate data and save check point file
+        :param epoch:
+        :param iteration:
+        :param scheduler:
+        :param eval_iterator: instance of ShardedDataIterator
+        :param do_save:
+        :return: figures of validation loss and correct ratio and average rank
+        """
         args = self.args
         # for distributed mode, save checkpoint for only one process
         # save_cp = args.local_rank in [-1, 0]
@@ -208,6 +232,11 @@ class BiEncoderTrainer(object):
         return validation_loss, correct_ratio, average_rank
 
     def validate_nll(self, data_iterator=None) -> float:
+        """
+        Validate negative log likelihood
+        :param data_iterator: instance of ShardedDataIterator
+        :return: figures of total loss and correct ratio
+        """
         logger.info('NLL validation ...')
         args = self.args
         self.biencoder.eval()
@@ -364,7 +393,16 @@ class BiEncoderTrainer(object):
 
     def _train_epoch(self, scheduler, epoch: int,
                      train_data_iterator: ShardedDataIterator, dev_data_iterator: ShardedDataIterator,
-                     do_save: bool = True):
+                     do_save: bool = True) -> dict:
+        """
+        Get epoch scores and accuracy of trained biencoder
+        :param scheduler:
+        :param epoch:
+        :param train_data_iterator: instance of ShardedDataIterator
+        :param dev_data_iterator: instance of ShardedDataIterator
+        :param do_save:
+        :return: dict of figures about epoch losses, accuracies and average rank
+        """
 
         args = self.args
         rolling_train_loss = 0.0
@@ -463,6 +501,12 @@ class BiEncoderTrainer(object):
         }
 
     def _save_checkpoint(self, scheduler, epoch: int, offset: int) -> str:
+        """
+        :param scheduler:
+        :param epoch:
+        :param offset:
+        :return: pt file written check point
+        """
         args = self.args
         model_to_save = get_model_obj(self.biencoder)
         fo_ckpt = os.path.join(
@@ -513,9 +557,17 @@ class BiEncoderTrainer(object):
 def _calc_loss(args, loss_function, local_q_vector, local_ctx_vectors, local_positive_idxs,
                local_hard_negatives_idxs: list = None,
                ) -> Tuple[T, bool]:
-    """
-    Calculates In-batch negatives schema loss and supports to run it in DDP mode by exchanging the representations
-    across all the nodes.
+    """ Calculates In-batch negatives schema loss and supports to run it in DDP mode by exchanging the representations across all the nodes.
+    # glossary
+        - local*  : mini-batch units
+        - global* : aggregation units of distributed mini-batch (local == global if args.distributed_world_size == 1)
+    # NOTE: In this function, calculate the loss per batch size. The following paper can be useful to understand more deeply
+        - https://arxiv.org/abs/2010.08191
+    =====
+    :param local_q_vector: TensorType['q_num': batch, 'hidden_size']
+    :param local_ctx_vectors: TensorType['ctx_num': batch*n_ctxs_per_q, 'hidden_size']
+    :param local_positive_idxs: list of positive_idxs (len == q_num)
+    :param local_hard_negatives_idxs: not currently in use, see dpr/models/biencoder.py
     """
     distributed_world_size = args.distributed_world_size or 1
     if distributed_world_size > 1:
@@ -571,6 +623,14 @@ def _calc_loss(args, loss_function, local_q_vector, local_ctx_vectors, local_pos
 
 def _do_biencoder_fwd_pass(model: nn.Module, input: BiEncoderBatch, tensorizer: Tensorizer, args) -> (
 torch.Tensor, int):
+    """
+    Get loss value and correction amount of forward pass
+    :param model:
+    :param input: namedtuple collections.namedtuple('BiENcoderInput',['question_ids', 'question_segments', 'context_ids', 'ctx_segments', 'is_positive', 'hard_negatives'])
+    :param tensorizer:
+    :param args:
+    :return: a tensor of loss value and amount of correct predictions per batch
+    """
     input = BiEncoderBatch(**move_to_device(input._asdict(), args.device))
 
     q_attn_mask = tensorizer.get_attn_mask(input.question_ids)
