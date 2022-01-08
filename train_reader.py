@@ -45,15 +45,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-"""
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-if (logger.hasHandlers()):
-    logger.handlers.clear()
-console = logging.StreamHandler()
-logger.addHandler(console)
-"""
-
 ReaderQuestionPredictions = collections.namedtuple(
     'ReaderQuestionPredictions', ['qid', 'question', 'predictions', 'gold_answers']
 )
@@ -94,13 +85,13 @@ class ReaderTrainer(object):
                           shuffle_seed: int = 0,
                           offset: int = 0) -> ShardedDataIterator:
         """
-        create data iterator
+        Create data iterator
         :param path: path of datsets
         :param batch_size: value of batch size
         :param is_train: whether the model is in training or not
         :param shuffle: whether shuffle datset or not
-        :param shuffle_seed: value of seed when shuffling
-        :param offset: value of offset
+        :param shuffle_seed: value of random seed when shuffling
+        :param offset: value of offset (to track in-shard iteration status)
         :return: data iterator
         """
         data_files = glob.glob(path)
@@ -117,7 +108,7 @@ class ReaderTrainer(object):
         # apply deserialization hook
         iterator.apply(lambda sample: sample.on_deserialize())
 
-        """キャッシュを削除"""
+        # remove cache
         for file in preprocessed_data_files:
             os.remove(file)
 
@@ -125,8 +116,8 @@ class ReaderTrainer(object):
 
     def run_train(self):
         """
-        train the model
-        :return: None
+        Train reader model
+        :return:
         """
         args = self.args
 
@@ -191,17 +182,15 @@ class ReaderTrainer(object):
             for epoch, epoch_score in enumerate(epoch_scores):
                 fo_dev.write('{}\t{}\n'.format(epoch, epoch_score['dev_score']))
 
-        return
-
-    def validate_and_save(self, epoch: int, iteration: int, scheduler, is_train: bool, is_test: bool):
+    def validate_and_save(self, epoch: int, iteration: int, scheduler, is_train: bool, is_test: bool) -> float:
         """
-        evaluate model and save checkpoint
+        Evaluate model and save checkpoint
         :param epoch: value of training epoch
         :param iteration: value of update
         :param scheduler: function that change learning rate while training
         :param is_train: whether the model is in training or not
         :param is_test: whether the model is in test or not
-        :return: score
+        :return: exact match score for predictions of reader model
         """
         args = self.args
         # in distributed DDP mode, save checkpoint for only one process
@@ -221,14 +210,14 @@ class ReaderTrainer(object):
 
         return reader_validation_score
 
-    def validate(self, is_train: bool, is_test: bool, epoch: int, no_calc_em: bool = False):
+    def validate(self, is_train: bool, is_test: bool, epoch: int, no_calc_em: bool = False) -> float:
         """
-        evaluate model
+        Evaluate predictions of reader model
         :param is_train: whether the model is in training or not
         :param is_test: whether the model is in test or not
         :param epoch: value of training epoch
         :param no_calc_em: whether calculate score or not
-        :return: score
+        :return: exact match score for predictions of reader model
         """
         logger.info('Validation ...')
         args = self.args
@@ -298,7 +287,7 @@ class ReaderTrainer(object):
     def _train_epoch(self, scheduler, epoch: int, eval_step: int,
                      train_data_iterator: ShardedDataIterator, global_step: int):
         """
-        train the model in one epoch
+        Train reader model in one epoch
         :param scheduler: function that change learning rate while training
         :param epoch: value of training epoch
         :param eval_step: update step when evaluating
@@ -402,9 +391,9 @@ class ReaderTrainer(object):
 
     def _load_saved_state(self, saved_state: CheckpointState):
         """
-        load saved model state
+        Load saved model state
         :param saved_state: saved model state
-        :return: None
+        :return:
         """
         epoch = saved_state.epoch
         offset = saved_state.offset
@@ -434,7 +423,7 @@ class ReaderTrainer(object):
         :param relevance_logits: logits of relevant passage
         :param samples_batch: sampled batch of instances
         :param passage_thresholds: top retrival passages thresholds to analyze prediction results for
-        :return: results
+        :return: list of predictions of reader model (ReaderQuestionPrediction)
         """
 
         args = self.args
@@ -485,7 +474,7 @@ class ReaderTrainer(object):
 
     def _calc_loss(self, input: ReaderBatch) -> torch.Tensor:
         """
-        calculate loss
+        Calculate loss
         :param input: input batch of instances
         :return: loss
         """
@@ -517,7 +506,7 @@ class ReaderTrainer(object):
 
     def _get_preprocessed_files(self, data_files: List, is_train: bool, ):
         """
-        get preprocssed files
+        Get preprocssed files
         :param data_files: path of dataset
         :param is_train: whetehr the model is in training or not
         :return: preprosesed file's name
@@ -580,10 +569,10 @@ class ReaderTrainer(object):
 
     def _save_predictions(self, out_file: str, prediction_results: List[ReaderQuestionPredictions]):
         """
-        save model's predictions
+        Save model's predictions
         :param out_file: path of output prediction result files
         :param prediction_results: model's prediction results
-        :return: None
+        :return:
         """
         logger.info('Saving prediction results to  %s', out_file)
         with open(out_file, 'w', encoding="utf-8") as output:

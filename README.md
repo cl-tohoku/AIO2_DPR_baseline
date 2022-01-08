@@ -4,7 +4,7 @@
 - 昨年度の概要は [こちら](https://sites.google.com/view/nlp2021-aio/)
 
 ## 更新履歴
-- 2022/01/09: ディレクトリ構造に関する説明を記述した [./instruction\_of\_dirtree.md](./instruction_of_dirtree.md) を作成しました。
+- 2022/01/09: ディレクトリ構造に関する説明を記述した [./instruction\_of\_dirtree.md](./instruction_of_dirtree.md) を作成しました。また各ソースコードに対してコメントを追記しました。
 - 2021/12/25: ベースラインの transformer のバージョンを `2.11.0` から `4.12.5` に更新しました。それに伴い、ベースラインのスコア、及び [./download\_model.sh](./download_model.sh) でダウンロードできるモデルを更新しています。
 
 
