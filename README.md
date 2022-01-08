@@ -147,7 +147,9 @@ id      text    title
 本節は以降の手順で作成された、Retriever、Reader、文書エンベッディングのダウンロード方法について説明します。
 必要に応じてダウンロードして下さい。
 <br>
+
 **2021/12/25 更新**：transformerのバージョンが2.11.0から4.12.5のものに訓練済みモデルを置き換えました。少なくとも第2回のベースラインとしてはこのバージョンで固定します。
+
 ```bash
 $ save_dir="model"
 $ targets="retriever,reader,embeddings"  # {retriever, reader, embeddings} からダウンロード対象を「スペースなしの ',' 区切り」で指定して下さい
