@@ -4,11 +4,12 @@
 - 昨年度の概要は [こちら](https://sites.google.com/view/nlp2021-aio/)
 
 ## 更新履歴
-- 2021/12/25: ベースラインのtransformerのバージョンを2.11.0から4.12.5に更新しました。それに伴い、ベースラインのスコア、及び[./download_model.sh](./download_model.sh)でダウンロードできるモデルを更新しています。
+- 2022/01/09: ディレクトリ構造に関する説明を記述した [./instruction\_of\_dirtree.md](./instruction_of_dirtree.md) を作成しました。
+- 2021/12/25: ベースラインの transformer のバージョンを `2.11.0` から `4.12.5` に更新しました。それに伴い、ベースラインのスコア、及び [./download\_model.sh](./download_model.sh) でダウンロードできるモデルを更新しています。
 
 
 ## 目次
-以下に記した実行手順の一連の流れについては、[./do_example_run.sh](./do_example_run.sh) に記載していますので、こちらもご確認下さい。
+以下に記した実行手順の一連の流れについては、[./do\_example\_run.sh](./do_example_run.sh) に記載していますので、こちらもご確認下さい。
 
 - [環境構築](#環境構築)
 - [データセット](#データセット)
