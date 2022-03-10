@@ -106,8 +106,8 @@ def main(args):
                     if answer in passage["text"]:
                         positive_passages.append(passage)
                         break
-                else:
-                    negative_passages.append(passage)
+                    else:
+                        negative_passages.append(passage)
 
             if len(positive_passages) > 0:
                 num_positive_question += 1
