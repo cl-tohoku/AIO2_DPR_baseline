@@ -17,6 +17,7 @@ RUN pip install --no-cache-dir \
         "faiss-cpu==1.7.1.post2" \
         "tensorboard==2.7.0" \
         "torch==1.9.1"
+        #"elasticsearch==7.16.2"
 
 # Download transformers models in advance
 ARG TRANSFORMERS_BASE_MODEL_NAME="cl-tohoku/bert-base-japanese-whole-word-masking"

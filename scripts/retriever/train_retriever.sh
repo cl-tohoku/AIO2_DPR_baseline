@@ -13,7 +13,7 @@ done
 
 test "${FLG_N}" != "TRUE" && (echo ${USAGE} && exit 1)
 test "${FLG_C}" != "TRUE" && CONFIG=scripts/configs/retriever_base.json
-test "${FLG_G}" == "TRUE" && export CUDA_VISIBLE_DEVICES=$GPU
+test "${FLG_G}" = "TRUE" && export CUDA_VISIBLE_DEVICES=$GPU
 
 
 # Train Retriever ======================================

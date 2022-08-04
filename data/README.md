@@ -8,12 +8,12 @@
 ### 必要なもの
 
 - Wikipedia Cirrussearch ダンプファイル
-    - 本データセットの作成には2021年5月13日付のファイルである `jawiki-20210503-cirrussearch-content.json.gz` を使用しました。
+    - 本データセットの作成には2022年6月27日付のファイルである `jawiki-20220627-cirrussearch-content.json.gz` を使用しました。
     - 最新のものは https://dumps.wikimedia.org/other/cirrussearch/ より入手できます。
 - [Elasticsearch](https://www.elastic.co/jp/elasticsearch/) と以下のプラグイン
     - [ICU Analysis plugin](https://www.elastic.co/guide/en/elasticsearch/plugins/current/analysis-icu.html)
     - [Japanese (kuromoji) Analysis plugin](https://www.elastic.co/guide/en/elasticsearch/plugins/current/analysis-kuromoji.html)
-    - 本データセットの作成には Elasticsearch v6.5.4 を使用しました。
+    - 本データセットの作成には Elasticsearch v7.16.2 を使用しました。
 
 ### データセット作成手順
 
@@ -21,8 +21,8 @@
 
 ```sh
 $ python get_all_page_ids_from_cirrussearch.py \
---cirrus_file <data_dir>/jawiki-20210503-cirrussearch-content.json.gz \
---output_file <work_dir>/jawiki-20210503-pageids.json \
+--cirrus_file <data_dir>/jawiki-20220627-cirrussearch-content.json.gz \
+--output_file <work_dir>/jawiki-20220627-pageids.json \
 --min_inlinks 10 \
 --exclude_sexual_pages
 ```
@@ -33,8 +33,8 @@ $ python get_all_page_ids_from_cirrussearch.py \
 
 ```sh
 $ python get_page_htmls.py \
---page_ids_file <work_dir>/jawiki-20210503-pageids.json \
---output_file <work_dir>/jawiki-20210503-page-htmls.json.gz \
+--page_ids_file <work_dir>/jawiki-20220627-pageids.json \
+--output_file <work_dir>/jawiki-20220627-page-htmls.json.gz \
 --batch_size 10
 ```
 
@@ -42,8 +42,8 @@ $ python get_page_htmls.py \
 
 ```sh
 $ python extract_paragraphs_from_page_htmls.py \
---input_file <work_dir>/jawiki-20210503-page-htmls.json.gz \
---output_file <work_dir>/jawiki-20210503-paragraphs.json.gz \
+--input_file <work_dir>/jawiki-20220627-page-htmls.json.gz \
+--output_file <work_dir>/jawiki-20220627-paragraphs.json.gz \
 --min_text_length 10 \
 --max_text_length 1000
 ```
@@ -52,8 +52,8 @@ $ python extract_paragraphs_from_page_htmls.py \
 
 ```sh
 $ python make_passages_from_paragraphs.py \
---input_file <work_dir>/jawiki-20210503-paragraphs.json.gz \
---output_file <work_dir>/passages-jawiki-20210503-paragraphs.json.gz \
+--input_file <work_dir>/jawiki-20220627-paragraphs.json.gz \
+--output_file <work_dir>/passages-jawiki-20220627-paragraphs.json.gz \
 --max_passage_length 400
 ```
 
@@ -61,8 +61,8 @@ $ python make_passages_from_paragraphs.py \
 
 ```sh
 $ python build_es_index_passages.py \
---input_file <work_dir>/passages-jawiki-20210503-paragraphs.json.gz \
---index_name jawiki-20210503-paragraphs \
+--input_file <work_dir>/passages-jawiki-20220627-paragraphs.json.gz \
+--index_name jawiki-20220627-paragraphs \
 --hostname localhost \
 --port 9200
 ```
@@ -73,19 +73,19 @@ $ python build_es_index_passages.py \
 $ python make_dpr_retriever_dataset.py \
 --input_file <data_dir>/abc_01-12.jsonl \
 --output_file <dpr_retriever_data_dir>/abc_01-12.jsonl.gz \
---es_index_name jawiki-20210503-paragraphs \
+--es_index_name jawiki-20220627-paragraphs \
 --num_documents_per_question 100
 
 $ python make_dpr_retriever_dataset.py \
 --input_file <data_dir>/aio_01_dev.jsonl \
 --output_file <dpr_retriever_data_dir>/aio_01_dev.jsonl.gz \
---es_index_name jawiki-20210503-paragraphs \
+--es_index_name jawiki-20220627-paragraphs \
 --num_documents_per_question 100
 
 $ python make_dpr_retriever_dataset.py \
 --input_file <data_dir>/aio_01_test.jsonl \
 --output_file <dpr_retriever_data_dir>/aio_01_test.jsonl.gz \
---es_index_name jawiki-20210503-paragraphs \
+--es_index_name jawiki-20220627-paragraphs \
 --num_documents_per_question 100
 ```
 
@@ -109,8 +109,8 @@ $ python make_dpr_qas_dataset.py \
 
 ```sh
 $ python make_dpr_wikipedia_split_dataset.py \
---input_file <work_dir>/passages-jawiki-20210503-paragraphs.json.gz \
---output_file <dpr_wikipedia_split_data_dir>/jawiki-20210503-paragraphs.tsv.gz
+--input_file <work_dir>/passages-jawiki-20220627-paragraphs.json.gz \
+--output_file <dpr_wikipedia_split_data_dir>/jawiki-20220627-paragraphs.tsv.gz
 ```
 
 ### ライセンス

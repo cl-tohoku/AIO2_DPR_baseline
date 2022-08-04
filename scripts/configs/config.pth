@@ -1,8 +1,19 @@
 # data
-WIKI_FILE=
-TRAIN_FILE=
-DEV_FILE=
-TEST_FILE=
+#WIKI_FILE=/work02/ariyama/exp2022/aio_dpr/datasets/wiki/jawiki-20210503-paragraphs.tsv.gz
+#TRAIN_FILE=/work02/ariyama/exp2022/aio_dpr/datasets/aio_second/aio_02_train_retriever.json.gz
+#DEV_FILE=/work02/ariyama/exp2022/aio_dpr/datasets/aio_second/aio_02_dev_v1.0.json.gz
+#TEST_FILE=/work02/ariyama/exp2022/aio_dpr/datasets/aio_second/aio_01_test_retriever.json.gz
 
-# dest (To create models, embeddings, etc under )
-DIR_DPR=
+#TRAIN_FILE=/work02/ariyama/exp2022/aio_dpr/datasets/aio/abc_01-12_retriever.json.gz
+#DEV_FILE=/work02/ariyama/exp2022/aio_dpr/datasets/aio/aio_01_dev_retriever.json.gz
+#TEST_FILE=/work02/ariyama/exp2022/aio_dpr/datasets/aio/aio_01_test_retriever.json
+#TEST_FILE=/work02/ariyama/exp2022/aio_dpr/datasets/aio_second/aio_02_test_v1.0_20220309.json.gz
+
+WIKI_FILE=/work00/ariyama/exp2022/aio/datasets/aio_third/aio_second_datasets/downloaded_from_official/wiki/jawiki-20210503-paragraphs.tsv.gz
+TRAIN_FILE=/work00/ariyama/exp2022/aio/datasets/aio_third/aio_second_datasets/downloaded_from_official/aio/abc_01-12_retriever.json.gz
+DEV_FILE=/work00/ariyama/exp2022/aio/datasets/aio_third/aio_second_datasets/downloaded_from_official/aio/aio_01_dev_retriever.json.gz
+TEST_FILE=/work00/ariyama/exp2022/aio/datasets/aio_third/aio_second_datasets/aio_02_test_v1.0_20220309.json
+
+# dest (To create models, embeddings, etc under $DIR_DPR/$NAME)
+#DIR_DPR=/work02/ariyama/exp2022/aio_dpr/models_and_embeddings/third_baseline
+DIR_DPR=/work00/ariyama/exp2022/aio/models_and_embeddings/dpr

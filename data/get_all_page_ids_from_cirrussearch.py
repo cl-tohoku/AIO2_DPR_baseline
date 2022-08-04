@@ -37,7 +37,7 @@ def main(args):
 
                 if args.min_inlinks is not None and num_inlinks < args.min_inlinks:
                     continue
-                if args.exclude_ambig_pages and "Template:Dmbox" in templates:
+                if args.exclude_disambiguation_pages and "Template:Dmbox" in templates:
                     continue
                 if args.exclude_sexual_pages and "Template:性的" in templates:
                     continue

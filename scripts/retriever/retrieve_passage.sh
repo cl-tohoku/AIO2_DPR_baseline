@@ -15,7 +15,7 @@ done
 test "${FLG_N}" != "TRUE" && (echo ${USAGE} && exit 1)
 test "${FLG_M}" != "TRUE" && (echo ${USAGE} && exit 1)
 test "${FLG_E}" != "TRUE" && (echo ${USAGE} && exit 1)
-test "${FLG_G}" == "TRUE" && export CUDA_VISIBLE_DEVICES=$GPU
+test "${FLG_G}" = "TRUE" && export CUDA_VISIBLE_DEVICES=$GPU
 
 
 # Retrieve Passages ======================================
